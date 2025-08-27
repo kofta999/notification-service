@@ -1,4 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { monitorQueue } from "./dispatcher";
 import { type Prisma, PrismaClient } from "./generated/prisma";
@@ -53,4 +54,5 @@ app.get("/status/:id", async (c) => {
   return c.json(notification);
 });
 
-export default app;
+serve(app);
+console.log('served')
