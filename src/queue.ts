@@ -1,4 +1,4 @@
-import { Notification } from "./generated/prisma";
+import type { Notification } from "./generated/prisma";
 
 interface IQueue<T> {
   enqueue(item: T): void;
