@@ -13,16 +13,16 @@ export const queue = new Queue({
 export async function monitorQueue(db: PrismaClient, queue: Queue) {
   // If queue is empty check the db (in case of a crash)
 
-  if (await queue.isEmpty()) {
-    const queuedNotifications = await db.notification.findMany({
-      where: { status: "QUEUED" },
-      select: { id: true },
-    });
+  // if (await queue.isEmpty()) {
+  //   const queuedNotifications = await db.notification.findMany({
+  //     where: { status: "QUEUED" },
+  //     select: { id: true },
+  //   });
 
-    queuedNotifications.forEach((n) => {
-      queue.enqueue(n.id);
-    });
-  }
+  //   queuedNotifications.forEach((n) => {
+  //     queue.enqueue(n.id);
+  //   });
+  // }
 
   // Pop items from queue
   while (true) {
