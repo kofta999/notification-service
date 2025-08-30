@@ -1,7 +1,12 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { db, queue } from "./dispatcher";
 import type { Notification } from "../generated/prisma";
-import { MAX_RETRIES } from "../config";
+import {
+  BACKOFF_BASE_DELAY_MS,
+  BACKOFF_EXPONENTIAL_FACTOR,
+  MAX_RETRIES,
+} from "../config";
+import { calculateBackoffDelay } from "../util";
 
 export async function processNotification(notification: Notification) {
   // Send notification
@@ -21,15 +26,25 @@ export async function processNotification(notification: Notification) {
     if (notification.retries < MAX_RETRIES) {
       notification.retries += 1;
 
+      const delay = calculateBackoffDelay(
+        notification.retries,
+        BACKOFF_EXPONENTIAL_FACTOR,
+        BACKOFF_BASE_DELAY_MS,
+      );
+
+      console.log(
+        `Notification with ID: ${notification.id} requeued in ${delay}ms. Retry count: ${notification.retries}`,
+      );
+      await sleep(delay);
+
       await db.notification.update({
         where: { id: notification.id },
         data: { retries: notification.retries, status: "QUEUED" },
       });
 
       queue.enqueue(notification.id);
-      console.log(
-        `Notification with ID: ${notification.id} requeued. Retry count: ${notification.retries}`,
-      );
+
+      console.log(`Notification with ID: ${notification.id} requeued`);
     } else {
       console.log(`Failed to send notification with ID: ${notification.id}`);
       await db.notification.update({
