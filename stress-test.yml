@@ -1,0 +1,18 @@
+config:
+  target: "http://localhost:3000" # Replace with your app's URL
+  phases:
+    - duration: 60 # Run for 60 seconds
+      arrivalRate: 20 # Inject 20 new virtual users per second
+  defaults:
+    headers:
+      Content-Type: "application/json"
+scenarios:
+  - flow:
+      - post:
+          url: "/notify"
+          json:
+            recipientId: "user123"
+            channel: "email"
+            channelAddress: "test@example.com"
+            payload:
+              message: "Hello from Artillery!"

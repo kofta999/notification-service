@@ -15,7 +15,7 @@ export async function monitorQueue() {
     });
   }
 
-  // Pop items from queue periodically
+  // Pop items from queue
   while (true) {
     const notificationId = await queue.dequeue();
 
