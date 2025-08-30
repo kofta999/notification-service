@@ -4,3 +4,4 @@ export const NUM_THREADS = 1;
 export const BACKOFF_EXPONENTIAL_FACTOR = 2;
 export const BACKOFF_BASE_DELAY_MS = 500;
 export const REAPING_INTERVAL_MINS = 1;
+export const RECONCILIATION_INTERVAL_MINS = 1;

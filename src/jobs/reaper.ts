@@ -1,6 +1,7 @@
 import { db, queue } from "../app";
 import { REAPING_INTERVAL_MINS } from "../config";
 
+/** Handles notifications that died during sending and puts them back into the queue*/
 async function reaper() {
   try {
     const stuckNotifications = (
