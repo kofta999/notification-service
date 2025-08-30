@@ -1,13 +1,18 @@
 import { db, queue } from "../app";
-import { RECONCILIATION_INTERVAL_MINS } from "../config";
+import { config } from "../config";
 
 /** Handles notifications that are queued but not in the queue (got dequeued then crashed) */
-async function reconciliator() {
+async function reconciler() {
   try {
     const queuedNotifications = (
       await db.notification.findMany({
         where: {
           status: "QUEUED",
+          updatedAt: {
+            lt: new Date(
+              Date.now() - config.RECONCILIATION_INTERVAL_MINS * 60 * 1000,
+            ),
+          },
         },
         select: { id: true },
       })
@@ -18,12 +23,12 @@ async function reconciliator() {
     queue.enqueue(...queuedNotifications);
 
     console.log(
-      `[Reconciliator] Enqueued ${queuedNotifications.length} notifications`,
+      `[Reconciler] Enqueued ${queuedNotifications.length} notifications`,
     );
   } catch (error) {
     console.error(error);
   }
 }
 
-setInterval(reconciliator, RECONCILIATION_INTERVAL_MINS * 60 * 1000);
-console.log("[Reconciliator] Started");
+setInterval(reconciler, config.RECONCILIATION_INTERVAL_MINS * 60 * 1000);
+console.log("[Reconciler] Started");

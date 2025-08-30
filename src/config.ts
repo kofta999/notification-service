@@ -1,7 +1,25 @@
-export const QUEUE_PREFIX = "redis_mq";
-export const MAX_RETRIES = 3;
-export const NUM_THREADS = 1;
-export const BACKOFF_EXPONENTIAL_FACTOR = 2;
-export const BACKOFF_BASE_DELAY_MS = 500;
-export const REAPING_INTERVAL_MINS = 1;
-export const RECONCILIATION_INTERVAL_MINS = 1;
+import { z } from "zod";
+import * as dotenv from "dotenv";
+dotenv.config();
+
+const configSchema = z.object({
+  QUEUE_PREFIX: z.string().default("redis_mq"),
+  MAX_RETRIES: z.coerce.number().positive().default(3),
+  NUM_THREADS: z.coerce.number().positive().default(1),
+  BACKOFF_EXPONENTIAL_FACTOR: z.coerce.number().positive().default(2),
+  BACKOFF_BASE_DELAY_MS: z.coerce.number().positive().default(500),
+  REAPING_INTERVAL_MINS: z.coerce.number().positive().default(1),
+  RECONCILIATION_INTERVAL_MINS: z.coerce.number().positive().default(1),
+});
+
+const parsedConfig = configSchema.safeParse(process.env);
+
+if (!parsedConfig.success) {
+  console.error(
+    "Invalid configuration:",
+    parsedConfig.error.flatten().fieldErrors,
+  );
+  throw new Error("Invalid configuration");
+}
+
+export const config = parsedConfig.data;

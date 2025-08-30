@@ -1,7 +1,7 @@
-import { QUEUE_PREFIX } from "./config";
+import { config } from "./config";
 
 export function formatMqKey(key: string) {
-  return `${QUEUE_PREFIX}:${key}`;
+  return `${config.QUEUE_PREFIX}:${key}`;
 }
 
 export function calculateBackoffDelay(
