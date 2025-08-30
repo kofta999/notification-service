@@ -2,7 +2,7 @@ import Redis from "ioredis";
 import { formatMqKey } from "./util";
 
 interface IQueue<T> {
-  enqueue(item: T): Promise<void>;
+  enqueue(...items: T[]): Promise<void>;
   dequeue(): Promise<T | null>;
   isEmpty(): Promise<boolean>;
 }
@@ -20,10 +20,10 @@ export class Queue implements IQueue<number> {
     this.config = config;
   }
 
-  async enqueue(item: number): Promise<void> {
+  async enqueue(...items: number[]): Promise<void> {
     await this.config.redis.lpush(
       this.generateQueueKey(),
-      JSON.stringify(item),
+      ...items.map((item) => item.toString()),
     );
   }
 

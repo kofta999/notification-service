@@ -1,5 +1,6 @@
 import { serve } from "@hono/node-server";
 import app from "./app";
+import "./jobs/reaper";
 import { NUM_THREADS } from "./config";
 
 serve(app);

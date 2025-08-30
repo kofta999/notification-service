@@ -1,14 +1,18 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { db, queue } from "./dispatcher";
-import type { Notification } from "../generated/prisma";
+import type { Notification, PrismaClient } from "../generated/prisma";
 import {
   BACKOFF_BASE_DELAY_MS,
   BACKOFF_EXPONENTIAL_FACTOR,
   MAX_RETRIES,
 } from "../config";
 import { calculateBackoffDelay } from "../util";
+import { Queue } from "../queue";
 
-export async function processNotification(notification: Notification) {
+export async function processNotification(
+  notification: Notification,
+  db: PrismaClient,
+  queue: Queue,
+) {
   // Send notification
   console.log(`Sending notification with ID: ${notification.id}`);
   try {

@@ -4,13 +4,13 @@ import { Queue } from "../queue";
 import { processNotification } from "./worker";
 import Redis from "ioredis";
 
-export const db = new PrismaClient();
-export const queue = new Queue({
-  queueName: "test",
-  redis: new Redis(),
-});
+export async function monitorQueue() {
+  const db = new PrismaClient();
+  const queue = new Queue({
+    queueName: "test",
+    redis: new Redis(),
+  });
 
-export async function monitorQueue(db: PrismaClient, queue: Queue) {
   // If queue is empty check the db (in case of a crash)
 
   // if (await queue.isEmpty()) {
@@ -34,11 +34,11 @@ export async function monitorQueue(db: PrismaClient, queue: Queue) {
         data: { status: "SENDING" },
       });
 
-      processNotification(notification);
+      processNotification(notification, db, queue);
     }
   }
 }
 
 if (!isMainThread) {
-  monitorQueue(db, queue);
+  monitorQueue();
 }

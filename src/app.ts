@@ -6,8 +6,8 @@ import { Queue } from "./queue";
 import Redis from "ioredis";
 
 const app = new Hono();
-const db = new PrismaClient();
-const queue = new Queue({
+export const db = new PrismaClient();
+export const queue = new Queue({
   queueName: "test",
   redis: new Redis(),
 });
