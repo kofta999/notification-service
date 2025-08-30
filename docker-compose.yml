@@ -6,6 +6,17 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+  db:
+    image: "postgres:15-alpine"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-notification_user} # Default to notification_user if not set
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-notification_password} # Default to notification_password if not set
+      POSTGRES_DB: ${POSTGRES_DB:-notification_db} # Default to notification_db if not set
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
 volumes:
   redis_data:
+  pg_data:
