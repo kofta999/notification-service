@@ -1,7 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { db, queue } from ".";
-import type { Notification } from "./generated/prisma";
-import { MAX_RETRIES } from "./config";
+import { db, queue } from "./dispatcher";
+import type { Notification } from "../generated/prisma";
+import { MAX_RETRIES } from "../config";
 
 export async function processNotification(notification: Notification) {
   // Send notification
