@@ -1,9 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { db } from ".";
+import { db, queue } from ".";
 import type { Notification } from "./generated/prisma";
-import { queue } from "./queue";
-
-const MAX_RETRIES = 3;
+import { MAX_RETRIES } from "./config";
 
 export async function processNotification(notification: Notification) {
   // Send notification
@@ -28,7 +26,7 @@ export async function processNotification(notification: Notification) {
         data: { retries: notification.retries, status: "QUEUED" },
       });
 
-      queue.enqueue(notification);
+      queue.enqueue(notification.id);
       console.log(
         `Notification with ID: ${notification.id} requeued. Retry count: ${notification.retries}`,
       );

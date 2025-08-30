@@ -1,29 +1,50 @@
-import type { Notification } from "./generated/prisma";
+import Redis from "ioredis";
+import { formatMqKey } from "./util";
 
 interface IQueue<T> {
-  enqueue(item: T): void;
-  dequeue(): T | undefined;
-  isEmpty(): boolean;
+  enqueue(item: T): Promise<void>;
+  dequeue(): Promise<T | null>;
+  isEmpty(): Promise<boolean>;
 }
 
-class Queue<T> implements IQueue<T> {
-  private queue: Array<T>;
+type QueueConfig = {
+  redis: Redis;
+  queueName: string;
+};
 
-  constructor() {
-    this.queue = [];
+export class Queue implements IQueue<number> {
+  private config: QueueConfig;
+  private TIMEOUT = 5;
+
+  constructor(config: QueueConfig) {
+    this.config = config;
   }
 
-  enqueue(item: T): void {
-    this.queue.push(item);
+  async enqueue(item: number): Promise<void> {
+    await this.config.redis.lpush(
+      this.generateQueueKey(),
+      JSON.stringify(item),
+    );
   }
 
-  dequeue(): T | undefined {
-    return this.queue.shift();
+  async dequeue(): Promise<number | null> {
+    const res = await this.config.redis.brpop(
+      this.generateQueueKey(),
+      this.TIMEOUT,
+    );
+
+    if (res) {
+      return parseInt(res[1], 10);
+    }
+
+    return null;
   }
 
-  isEmpty(): boolean {
-    return this.queue.length === 0;
+  async isEmpty(): Promise<boolean> {
+    return (await this.config.redis.llen(this.generateQueueKey())) === 0;
+  }
+
+  private generateQueueKey() {
+    return formatMqKey(this.config.queueName);
   }
 }
-
-export const queue = new Queue<Notification>();

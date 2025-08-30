@@ -1,35 +1,27 @@
-import { queue } from "./queue";
-import { setTimeout as sleep } from "node:timers/promises";
 import { processNotification } from "./worker";
-import { db } from ".";
-import { Prisma } from "./generated/prisma";
-
-const SLEEP_DURATION_MS = 1000;
+import { db, queue } from ".";
 
 export async function monitorQueue() {
   // If queue is empty check the db (in case of a crash)
 
-  if (queue.isEmpty()) {
+  if (await queue.isEmpty()) {
     const queuedNotifications = await db.notification.findMany({
       where: { status: "QUEUED" },
+      select: { id: true },
     });
 
     queuedNotifications.forEach((n) => {
-      queue.enqueue({ ...n, payload: n.payload as Prisma.JsonObject });
+      queue.enqueue(n.id);
     });
   }
 
   // Pop items from queue periodically
   while (true) {
-    await sleep(SLEEP_DURATION_MS);
+    const notificationId = await queue.dequeue();
 
-    // console.log("CHECKING FOR NOTIFICATIONS IN QUEUE");
-
-    const notification = queue.dequeue();
-
-    if (notification) {
-      await db.notification.update({
-        where: { id: notification.id },
+    if (notificationId) {
+      const notification = await db.notification.update({
+        where: { id: notificationId },
         data: { status: "SENDING" },
       });
 

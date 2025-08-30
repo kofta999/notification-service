@@ -3,11 +3,16 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { monitorQueue } from "./dispatcher";
 import { type Prisma, PrismaClient } from "./generated/prisma";
-import { queue } from "./queue";
 import { NotifyRequestSchema } from "./schemas";
+import { Queue } from "./queue";
+import Redis from "ioredis";
 
 const app = new Hono();
 export const db = new PrismaClient();
+export const queue = new Queue({
+  queueName: "test",
+  redis: new Redis(),
+});
 
 monitorQueue();
 
@@ -20,19 +25,20 @@ app.post("/notify", zValidator("json", NotifyRequestSchema), async (c) => {
   const body = c.req.valid("json");
 
   // Insert into db
-  const notification = await db.notification.create({
+  const { id } = await db.notification.create({
     data: {
       channel: body.channel,
       channelAddress: body.channelAddress,
       payload: body.payload as Prisma.JsonObject,
       recipientId: body.recipientId,
     },
+    select: { id: true },
   });
 
   // Enqueue to dispatcher
-  queue.enqueue(notification);
+  queue.enqueue(id);
 
-  return c.json({ id: notification.id });
+  return c.json({ id });
 });
 
 app.get("/status/:id", async (c) => {
@@ -55,4 +61,4 @@ app.get("/status/:id", async (c) => {
 });
 
 serve(app);
-console.log('served')
+console.log("served");
