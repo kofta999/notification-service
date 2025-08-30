@@ -38,5 +38,5 @@ model Notification {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@index([status])
+  @@index([id, status])
 }
