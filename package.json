@@ -1,7 +1,8 @@
 {
   "name": "notification-service",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --hot src/index.ts",
+    "stressTest": "artillery run stress-test.yml"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",
@@ -13,6 +14,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "artillery": "^2.0.24",
     "prisma": "^6.14.0"
   }
 }
