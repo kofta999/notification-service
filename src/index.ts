@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import app from "./app";
 import "./jobs/reaper";
-import "./jobs/reconciliator";
+import "./jobs/reconciler";
 import { config } from "./config";
 
 serve(app);
