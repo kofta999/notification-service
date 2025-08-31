@@ -24,8 +24,6 @@ export async function processNotification(
     console.log(`Notification with ID: ${notification.id} is sent`);
   } catch (error) {
     if (notification.retries < config.MAX_RETRIES) {
-      notification.retries += 1;
-
       const delay = calculateBackoffDelay(
         notification.retries,
         config.BACKOFF_EXPONENTIAL_FACTOR,
@@ -39,7 +37,7 @@ export async function processNotification(
 
       await db.notification.update({
         where: { id: notification.id },
-        data: { retries: notification.retries, status: "QUEUED" },
+        data: { retries: { increment: 1 }, status: "QUEUED" },
       });
 
       queue.enqueue(notification.id);
