@@ -1,8 +1,11 @@
 import { db, queue } from "../app";
 import { config } from "../config";
+import { metrics } from "../metrics";
 
 /** Handles notifications that died during sending and puts them back into the queue*/
 async function reaper() {
+  metrics.reaper_runs_total.inc();
+
   try {
     const stuckNotifications = (
       await db.notification.findMany({
@@ -16,7 +19,11 @@ async function reaper() {
       })
     ).map((n) => n.id);
 
+    metrics.db_sending_notifications.set(stuckNotifications.length);
+
     if (stuckNotifications.length === 0) return;
+
+    metrics.reaper_stuck_jobs_detected_total.inc(stuckNotifications.length);
 
     await db.notification.updateMany({
       where: { id: { in: stuckNotifications } },
@@ -24,6 +31,8 @@ async function reaper() {
     });
 
     await queue.enqueue(...stuckNotifications);
+
+    metrics.reaper_stuck_jobs_requeued_total.inc(stuckNotifications.length);
 
     console.log(
       `[Reaper] Reset ${stuckNotifications.length} stuck notifications`,

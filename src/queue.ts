@@ -4,7 +4,7 @@ import { formatMqKey } from "./util";
 interface IQueue<T> {
   enqueue(...items: T[]): Promise<void>;
   dequeue(): Promise<T | null>;
-  isEmpty(): Promise<boolean>;
+  length(): Promise<number>;
 }
 
 type QueueConfig = {
@@ -40,8 +40,8 @@ export class Queue implements IQueue<number> {
     return null;
   }
 
-  async isEmpty(): Promise<boolean> {
-    return (await this.config.redis.llen(this.generateQueueKey())) === 0;
+  async length(): Promise<number> {
+    return this.config.redis.llen(this.generateQueueKey());
   }
 
   private generateQueueKey() {

@@ -1,10 +1,12 @@
 import { isMainThread } from "node:worker_threads";
 import { PrismaClient } from "../generated/prisma";
 import { Queue } from "../queue";
-import { processNotification } from "./worker";
+import { handleNotification } from "./notification-handler";
 import Redis from "ioredis";
+import "./submit-metrics";
+import { metrics } from "./metrics";
 
-export async function monitorQueue() {
+export async function workerLoop() {
   const db = new PrismaClient();
   const queue = new Queue({
     queueName: "test",
@@ -15,13 +17,14 @@ export async function monitorQueue() {
     const notificationId = await queue.dequeue();
 
     if (notificationId) {
+      metrics.worker_jobs_picked_up_total.inc();
       try {
         const notification = await db.notification.update({
           where: { id: notificationId, status: "QUEUED" },
           data: { status: "SENDING" },
         });
 
-        processNotification(notification, db, queue);
+        handleNotification(notification, db, queue);
       } catch (error) {
         console.error(error);
       }
@@ -30,5 +33,5 @@ export async function monitorQueue() {
 }
 
 if (!isMainThread) {
-  monitorQueue();
+  workerLoop();
 }

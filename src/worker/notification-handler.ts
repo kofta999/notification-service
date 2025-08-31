@@ -3,14 +3,17 @@ import type { Notification, PrismaClient } from "../generated/prisma";
 import { config } from "../config";
 import { calculateBackoffDelay } from "../util";
 import { Queue } from "../queue";
+import { metrics } from "./metrics";
 
-export async function processNotification(
+export async function handleNotification(
   notification: Notification,
   db: PrismaClient,
   queue: Queue,
 ) {
   // Send notification
   console.log(`Sending notification with ID: ${notification.id}`);
+  // const endTimer = metrics.worker_processing_duration_seconds.startTimer();
+
   try {
     if (notification.channel === "email") {
       await sendEmail(notification);
@@ -20,6 +23,8 @@ export async function processNotification(
       where: { id: notification.id },
       data: { status: "SENT" },
     });
+
+    metrics.worker_jobs_sent_total.inc();
 
     console.log(`Notification with ID: ${notification.id} is sent`);
   } catch (error) {
@@ -40,7 +45,9 @@ export async function processNotification(
         data: { retries: { increment: 1 }, status: "QUEUED" },
       });
 
-      queue.enqueue(notification.id);
+      await queue.enqueue(notification.id);
+
+      metrics.worker_jobs_retried_total.inc();
 
       console.log(`Notification with ID: ${notification.id} requeued`);
     } else {
@@ -49,7 +56,11 @@ export async function processNotification(
         where: { id: notification.id },
         data: { status: "FAILED" },
       });
+
+      metrics.worker_jobs_failed_total.inc();
     }
+  } finally {
+    // endTimer();
   }
 }
 

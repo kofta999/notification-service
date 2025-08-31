@@ -4,6 +4,8 @@ import { type Prisma, PrismaClient } from "./generated/prisma";
 import { NotifyRequestSchema } from "./schemas";
 import { Queue } from "./queue";
 import Redis from "ioredis";
+import { metrics } from "./metrics";
+import { register } from "prom-client";
 
 const app = new Hono();
 export const db = new PrismaClient();
@@ -20,21 +22,29 @@ app.post("/notify", zValidator("json", NotifyRequestSchema), async (c) => {
   // Validate
   const body = c.req.valid("json");
 
-  // Insert into db
-  const { id } = await db.notification.create({
-    data: {
-      channel: body.channel,
-      channelAddress: body.channelAddress,
-      payload: body.payload as Prisma.JsonObject,
-      recipientId: body.recipientId,
-    },
-    select: { id: true },
-  });
+  try {
+    // Insert into db
+    const { id } = await db.notification.create({
+      data: {
+        channel: body.channel,
+        channelAddress: body.channelAddress,
+        payload: body.payload as Prisma.JsonObject,
+        recipientId: body.recipientId,
+      },
+      select: { id: true },
+    });
 
-  // Enqueue to dispatcher
-  queue.enqueue(id);
+    // Enqueue to dispatcher
+    await queue.enqueue(id);
 
-  return c.json({ id });
+    metrics.api_jobs_enqueued_total.inc();
+
+    return c.json({ id });
+  } catch (error) {
+    console.error(error);
+    metrics.api_jobs_enqueue_failed_total.inc();
+    throw error;
+  }
 });
 
 app.get("/status/:id", async (c) => {
@@ -54,6 +64,12 @@ app.get("/status/:id", async (c) => {
   }
 
   return c.json(notification);
+});
+
+app.get("/metrics", async (c) => {
+  c.header("Content-Type", register.contentType);
+  const metrics = await register.metrics();
+  return c.text(metrics);
 });
 
 export default app;
