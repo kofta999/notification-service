@@ -5,13 +5,9 @@ import "./jobs/reconciler";
 import { config } from "./config";
 import { existsSync } from "node:fs";
 import { Worker } from "node:worker_threads";
-import {
-  MetricObjectWithValues,
-  MetricValue,
-  register,
-  Registry,
-} from "prom-client";
+import { MetricObjectWithValues, MetricValue } from "prom-client";
 import { metrics } from "./metrics";
+import type { workerMetrics } from "./worker/metrics";
 
 serve(app);
 console.log("Server up and listening on port 3000");
@@ -28,8 +24,11 @@ for (let i = 0; i < config.NUM_THREADS; ++i) {
   worker.on(
     "message",
     (sentMetrics: MetricObjectWithValues<MetricValue<string>>[]) => {
-      for (const { name, values } of sentMetrics) {
-        // @ts-ignore
+      for (const metric of sentMetrics) {
+        const { name, values } = metric as {
+          name: keyof typeof workerMetrics;
+          values: MetricValue<string>[];
+        };
         metrics[name].inc(values[0].value);
       }
 
