@@ -5,13 +5,13 @@ import { handleNotification } from "./notification-handler";
 import Redis from "ioredis";
 import "./submit-metrics";
 import { workerMetrics } from "./metrics";
-import { config } from "../config";
+import { env } from "../config";
 
 export async function workerLoop() {
   const db = new PrismaClient();
   const queue = new Queue({
     queueName: "test",
-    redis: new Redis(config.REDIS_URL),
+    redis: new Redis(env.REDIS_URL),
   });
 
   while (true) {

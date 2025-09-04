@@ -2,11 +2,11 @@ import { serve } from "@hono/node-server";
 import app from "./app";
 import "./jobs/reaper";
 import "./jobs/reconciler";
-import { config } from "./config";
+import { env } from "./env";
 import { existsSync } from "node:fs";
 import { Worker } from "node:worker_threads";
 import { MetricObjectWithValues, MetricValue } from "prom-client";
-import { metrics } from "./metrics";
+import { metrics } from "./lib/metrics";
 import type { workerMetrics } from "./worker/metrics";
 
 serve(app);
@@ -19,7 +19,7 @@ if (!existsSync(workerPath)) {
   process.exit(1);
 }
 
-for (let i = 0; i < config.NUM_THREADS; ++i) {
+for (let i = 0; i < env.NUM_THREADS; ++i) {
   const worker = new Worker(workerPath);
   worker.on(
     "message",

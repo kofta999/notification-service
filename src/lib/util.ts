@@ -1,7 +1,7 @@
-import { config } from "./config";
+import { env } from "../env";
 
 export function formatMqKey(key: string) {
-  return `${config.QUEUE_PREFIX}:${key}`;
+  return `${env.QUEUE_PREFIX}:${key}`;
 }
 
 export function calculateBackoffDelay(

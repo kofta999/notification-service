@@ -1,5 +1,5 @@
 import { db, queue } from "../app";
-import { config } from "../config";
+import { env } from "../config";
 import { metrics } from "../metrics";
 
 /** Handles notifications that are queued but not in the queue (got dequeued then crashed) */
@@ -13,7 +13,7 @@ async function reconciler() {
           status: "QUEUED",
           updatedAt: {
             lt: new Date(
-              Date.now() - config.RECONCILIATION_INTERVAL_MINS * 60 * 1000,
+              Date.now() - env.RECONCILIATION_INTERVAL_MINS * 60 * 1000,
             ),
           },
         },
@@ -39,5 +39,5 @@ async function reconciler() {
   }
 }
 
-setInterval(reconciler, config.RECONCILIATION_INTERVAL_MINS * 60 * 1000);
+setInterval(reconciler, env.RECONCILIATION_INTERVAL_MINS * 60 * 1000);
 console.log("[Reconciler] Started");

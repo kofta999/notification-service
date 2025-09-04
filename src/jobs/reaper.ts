@@ -1,5 +1,5 @@
 import { db, queue } from "../app";
-import { config } from "../config";
+import { env } from "../config";
 import { metrics } from "../metrics";
 
 /** Handles notifications that died during sending and puts them back into the queue*/
@@ -12,7 +12,7 @@ async function reaper() {
         where: {
           status: "SENDING",
           updatedAt: {
-            lt: new Date(Date.now() - config.REAPING_INTERVAL_MINS * 60 * 1000),
+            lt: new Date(Date.now() - env.REAPING_INTERVAL_MINS * 60 * 1000),
           },
         },
         select: { id: true },
@@ -42,5 +42,5 @@ async function reaper() {
   }
 }
 
-setInterval(reaper, config.REAPING_INTERVAL_MINS * 60 * 1000);
+setInterval(reaper, env.REAPING_INTERVAL_MINS * 60 * 1000);
 console.log("[Reaper] Started");

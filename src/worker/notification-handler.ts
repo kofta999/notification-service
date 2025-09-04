@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { Notification, PrismaClient } from "../generated/prisma";
-import { config } from "../config";
+import { env } from "../config";
 import { calculateBackoffDelay } from "../util";
 import { Queue } from "../queue";
 import { workerMetrics } from "./metrics";
@@ -28,11 +28,11 @@ export async function handleNotification(
 
     console.log(`Notification with ID: ${notification.id} is sent`);
   } catch (error) {
-    if (notification.retries < config.MAX_RETRIES) {
+    if (notification.retries < env.MAX_RETRIES) {
       const delay = calculateBackoffDelay(
         notification.retries,
-        config.BACKOFF_EXPONENTIAL_FACTOR,
-        config.BACKOFF_BASE_DELAY_MS,
+        env.BACKOFF_EXPONENTIAL_FACTOR,
+        env.BACKOFF_BASE_DELAY_MS,
       );
 
       console.log(

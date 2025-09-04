@@ -1,6 +1,6 @@
 // metrics.ts
 import { Counter, Registry, Gauge, register } from "prom-client";
-import { workerMetrics } from "./worker/metrics";
+import { workerMetrics } from "../worker/metrics";
 
 // Default metrics (Node.js event loop, memory, GC, etc.)
 //collectDefaultMetrics({ register });

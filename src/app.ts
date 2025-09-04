@@ -1,18 +1,18 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { type Prisma, PrismaClient } from "./generated/prisma";
-import { NotifyRequestSchema } from "./schemas";
-import { Queue } from "./queue";
+import { NotifyRequestSchema } from "./lib/schemas";
+import { Queue } from "./lib/queue";
 import Redis from "ioredis";
-import { metrics } from "./metrics";
+import { metrics } from "./lib/metrics";
 import { register } from "prom-client";
-import { config } from "./config";
+import { env } from "./env";
 
 const app = new Hono();
 export const db = new PrismaClient();
 export const queue = new Queue({
   queueName: "test",
-  redis: new Redis(config.REDIS_URL),
+  redis: new Redis(env.REDIS_URL),
 });
 
 app.get("/", (c) => {
