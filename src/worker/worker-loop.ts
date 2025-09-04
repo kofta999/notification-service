@@ -7,9 +7,10 @@ import "./submit-metrics";
 import { workerMetrics } from "./metrics";
 import { env } from "../env";
 import { createLogger } from "../lib/logger";
+import { createPrisma } from "../lib/db";
 
 export async function workerLoop() {
-  const db = new PrismaClient();
+  const db = createPrisma();
   const queue = new Queue({
     queueName: "test",
     redis: new Redis(env.REDIS_URL),
