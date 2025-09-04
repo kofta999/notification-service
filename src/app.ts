@@ -6,12 +6,13 @@ import { Queue } from "./queue";
 import Redis from "ioredis";
 import { metrics } from "./metrics";
 import { register } from "prom-client";
+import { config } from "./config";
 
 const app = new Hono();
 export const db = new PrismaClient();
 export const queue = new Queue({
   queueName: "test",
-  redis: new Redis(),
+  redis: new Redis(config.REDIS_URL),
 });
 
 app.get("/", (c) => {
