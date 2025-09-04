@@ -8,19 +8,22 @@ import { Worker } from "node:worker_threads";
 import { MetricObjectWithValues, MetricValue } from "prom-client";
 import { metrics } from "./lib/metrics";
 import type { workerMetrics } from "./worker/metrics";
+import { createLogger } from "./lib/logger";
+
+const logger = createLogger("main");
 
 serve(app);
-console.log("Server up and listening on port 3000");
+logger.info("Server up and listening on port 3000");
 
 const workerPath = "./src/worker/worker-loop.ts";
 
 if (!existsSync(workerPath)) {
-  console.error(`Worker file not found: ${workerPath}`);
+  logger.error(`Worker file not found: ${workerPath}`);
   process.exit(1);
 }
 
 for (let i = 0; i < env.NUM_THREADS; ++i) {
-  const worker = new Worker(workerPath);
+  const worker = new Worker(workerPath, { workerData: { workerId: i } });
   worker.on(
     "message",
     (sentMetrics: MetricObjectWithValues<MetricValue<string>>[]) => {
@@ -32,8 +35,8 @@ for (let i = 0; i < env.NUM_THREADS; ++i) {
         metrics[name].inc(values[0].value);
       }
 
-      console.log("Metrics updated from workers");
+      logger.info({ workerId: i }, "Metrics updated");
     },
   );
-  console.log(`Worker ${i} is running`);
+  logger.info({ workerId: i }, `Worker is running`);
 }

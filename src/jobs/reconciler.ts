@@ -1,6 +1,9 @@
 import { db, queue } from "../app";
-import { env } from "../config";
-import { metrics } from "../metrics";
+import { env } from "../env";
+import { metrics } from "../lib/metrics";
+import { createLogger } from "../lib/logger";
+
+const logger = createLogger("reconciler");
 
 /** Handles notifications that are queued but not in the queue (got dequeued then crashed) */
 async function reconciler() {
@@ -31,13 +34,14 @@ async function reconciler() {
 
     metrics.reconciler_jobs_requeued_total.inc(queuedNotifications.length);
 
-    console.log(
-      `[Reconciler] Enqueued ${queuedNotifications.length} notifications`,
+    logger.info(
+      { count: queuedNotifications.length },
+      "Enqueued notifications",
     );
   } catch (error) {
-    console.error(error);
+    logger.error({ error }, "Error in reconciler job");
   }
 }
 
 setInterval(reconciler, env.RECONCILIATION_INTERVAL_MINS * 60 * 1000);
-console.log("[Reconciler] Started");
+logger.info("Reconciler started");

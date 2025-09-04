@@ -1,17 +1,20 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { Notification, PrismaClient } from "../generated/prisma";
-import { env } from "../config";
-import { calculateBackoffDelay } from "../util";
-import { Queue } from "../queue";
+import { env } from "../env";
+import { calculateBackoffDelay } from "../lib/util";
+import { Queue } from "../lib/queue";
 import { workerMetrics } from "./metrics";
+import type { Logger } from "pino";
 
 export async function handleNotification(
   notification: Notification,
   db: PrismaClient,
   queue: Queue,
+  parentLogger: Logger,
 ) {
+  const log = parentLogger.child({ notificationId: notification.id });
   // Send notification
-  console.log(`Sending notification with ID: ${notification.id}`);
+  log.info({ channel: notification.channel }, `Sending notification`);
   // const endTimer = metrics.worker_processing_duration_seconds.startTimer();
 
   try {
@@ -26,8 +29,13 @@ export async function handleNotification(
 
     workerMetrics.worker_jobs_sent_total.inc();
 
-    console.log(`Notification with ID: ${notification.id} is sent`);
+    log.info(`Notification sent successfully`);
   } catch (error) {
+    log.error(
+      { error, retries: notification.retries },
+      `Error sending notification`,
+    );
+
     if (notification.retries < env.MAX_RETRIES) {
       const delay = calculateBackoffDelay(
         notification.retries,
@@ -35,8 +43,9 @@ export async function handleNotification(
         env.BACKOFF_BASE_DELAY_MS,
       );
 
-      console.log(
-        `Notification with ID: ${notification.id} requeued in ${delay}ms. Retry count: ${notification.retries}`,
+      log.warn(
+        { delay, retries: notification.retries + 1 },
+        `Requeueing notification`,
       );
       await sleep(delay);
 
@@ -49,9 +58,9 @@ export async function handleNotification(
 
       workerMetrics.worker_jobs_retried_total.inc();
 
-      console.log(`Notification with ID: ${notification.id} requeued`);
+      log.info(`Notification requeued successfully`);
     } else {
-      console.log(`Failed to send notification with ID: ${notification.id}`);
+      log.error(`Notification failed after max retries`);
       await db.notification.update({
         where: { id: notification.id },
         data: { status: "FAILED" },
@@ -61,6 +70,7 @@ export async function handleNotification(
     }
   } finally {
     // endTimer();
+    log.debug(`Finished processing notification`);
   }
 }
 

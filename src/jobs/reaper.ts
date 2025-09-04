@@ -1,6 +1,9 @@
 import { db, queue } from "../app";
-import { env } from "../config";
-import { metrics } from "../metrics";
+import { env } from "../env";
+import { metrics } from "../lib/metrics";
+import { createLogger } from "../lib/logger";
+
+const logger = createLogger("reaper");
 
 /** Handles notifications that died during sending and puts them back into the queue*/
 async function reaper() {
@@ -34,13 +37,14 @@ async function reaper() {
 
     metrics.reaper_stuck_jobs_requeued_total.inc(stuckNotifications.length);
 
-    console.log(
-      `[Reaper] Reset ${stuckNotifications.length} stuck notifications`,
+    logger.info(
+      { count: stuckNotifications.length },
+      "Reset stuck notifications",
     );
   } catch (error) {
-    console.error(error);
+    logger.error({ error }, "Error in reaper job");
   }
 }
 
 setInterval(reaper, env.REAPING_INTERVAL_MINS * 60 * 1000);
-console.log("[Reaper] Started");
+logger.info("Reaper started");

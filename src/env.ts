@@ -1,6 +1,6 @@
 import { z } from "zod";
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const envSchema = z.object({
   DATABASE_URL: z
