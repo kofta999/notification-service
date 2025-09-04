@@ -35,7 +35,7 @@ for (let i = 0; i < env.NUM_THREADS; ++i) {
         metrics[name].inc(values[0].value);
       }
 
-      logger.info({ workerId: i }, "Metrics updated");
+      logger.debug({ workerId: i }, "Metrics updated");
     },
   );
   logger.info({ workerId: i }, `Worker is running`);
