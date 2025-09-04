@@ -2,7 +2,7 @@ import { z } from "zod";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const configSchema = z.object({
+const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .default(
@@ -18,7 +18,7 @@ const configSchema = z.object({
   RECONCILIATION_INTERVAL_MINS: z.coerce.number().positive().default(1),
 });
 
-const parsedConfig = configSchema.safeParse(process.env);
+const parsedConfig = envSchema.safeParse(process.env);
 
 if (!parsedConfig.success) {
   console.error(
@@ -28,4 +28,4 @@ if (!parsedConfig.success) {
   throw new Error("Invalid configuration");
 }
 
-export const config = parsedConfig.data;
+export const env = parsedConfig.data;
