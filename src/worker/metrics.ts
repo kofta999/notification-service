@@ -1,4 +1,4 @@
-import { Counter, Histogram } from "prom-client";
+import { Counter } from "prom-client";
 
 // Worker / Dispatcher metrics
 const worker_jobs_picked_up_total = new Counter({
@@ -23,7 +23,7 @@ const worker_jobs_retried_total = new Counter({
 //   buckets: [0.1, 0.5, 1, 2, 5, 10], // seconds
 // });
 
-export const metrics = {
+export const workerMetrics = {
   // Worker
   worker_jobs_picked_up_total,
   worker_jobs_sent_total,

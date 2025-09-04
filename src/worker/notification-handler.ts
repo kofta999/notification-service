@@ -3,7 +3,7 @@ import type { Notification, PrismaClient } from "../generated/prisma";
 import { config } from "../config";
 import { calculateBackoffDelay } from "../util";
 import { Queue } from "../queue";
-import { metrics } from "./metrics";
+import { workerMetrics } from "./metrics";
 
 export async function handleNotification(
   notification: Notification,
@@ -24,7 +24,7 @@ export async function handleNotification(
       data: { status: "SENT" },
     });
 
-    metrics.worker_jobs_sent_total.inc();
+    workerMetrics.worker_jobs_sent_total.inc();
 
     console.log(`Notification with ID: ${notification.id} is sent`);
   } catch (error) {
@@ -47,7 +47,7 @@ export async function handleNotification(
 
       await queue.enqueue(notification.id);
 
-      metrics.worker_jobs_retried_total.inc();
+      workerMetrics.worker_jobs_retried_total.inc();
 
       console.log(`Notification with ID: ${notification.id} requeued`);
     } else {
@@ -57,7 +57,7 @@ export async function handleNotification(
         data: { status: "FAILED" },
       });
 
-      metrics.worker_jobs_failed_total.inc();
+      workerMetrics.worker_jobs_failed_total.inc();
     }
   } finally {
     // endTimer();

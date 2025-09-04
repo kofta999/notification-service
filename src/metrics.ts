@@ -1,12 +1,6 @@
 // metrics.ts
-import {
-  Counter,
-  Registry,
-  Gauge,
-  collectDefaultMetrics,
-  Histogram,
-  register,
-} from "prom-client";
+import { Counter, Registry, Gauge, register } from "prom-client";
+import { workerMetrics } from "./worker/metrics";
 
 // Default metrics (Node.js event loop, memory, GC, etc.)
 //collectDefaultMetrics({ register });
@@ -19,24 +13,6 @@ const api_jobs_enqueued_total = new Counter({
 const api_jobs_enqueue_failed_total = new Counter({
   name: "api_jobs_enqueue_failed_total",
   help: "Total jobs that failed to enqueue into Redis by the API",
-});
-
-// Worker / Dispatcher metrics
-const worker_jobs_picked_up_total = new Counter({
-  name: "worker_jobs_picked_up_total",
-  help: "Jobs dequeued from Redis by workers",
-});
-const worker_jobs_sent_total = new Counter({
-  name: "worker_jobs_sent_total",
-  help: "Jobs successfully processed and marked sent",
-});
-const worker_jobs_failed_total = new Counter({
-  name: "worker_jobs_failed_total",
-  help: "Jobs permanently failed after retries",
-});
-const worker_jobs_retried_total = new Counter({
-  name: "worker_jobs_retried_total",
-  help: "Jobs retried due to transient error",
 });
 
 // Reaper metrics
@@ -93,10 +69,7 @@ export const metrics = {
   reaper_stuck_jobs_detected_total,
   reaper_stuck_jobs_requeued_total,
   // Worker
-  worker_jobs_picked_up_total,
-  worker_jobs_sent_total,
-  worker_jobs_failed_total,
-  worker_jobs_retried_total,
+  ...workerMetrics,
   // Reconciler
   reconciler_runs_total,
   reconciler_jobs_detected_total,
