@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 dotenv.config({ quiet: true });
 
 const envSchema = z.object({
+  APP_PORT: z.coerce.number().positive().default(3000),
   DATABASE_URL: z
     .string()
     .default(

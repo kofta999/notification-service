@@ -12,8 +12,8 @@ import { createLogger } from "./lib/logger";
 
 const logger = createLogger("main");
 
-serve(app);
-logger.info("Server up and listening on port 3000");
+serve({ port: env.APP_PORT, fetch: app.fetch });
+logger.info(`Server up and listening on port ${env.APP_PORT}`);
 
 const workerPath = "./src/worker/worker-loop.ts";
 
