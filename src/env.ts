@@ -16,6 +16,7 @@ const envSchema = z.object({
   BACKOFF_EXPONENTIAL_FACTOR: z.coerce.number().positive().default(2),
   BACKOFF_BASE_DELAY_MS: z.coerce.number().positive().default(500),
   REAPING_INTERVAL_MINS: z.coerce.number().positive().default(1),
+  RATE_LIMIT_REQUEUE_DELAY_MS: z.coerce.number().positive().default(1000),
   RECONCILIATION_INTERVAL_MINS: z.coerce.number().positive().default(1),
 });
 
