@@ -1,14 +1,15 @@
 services:
   migrations:
     image: notification-service
-    command: "prisma migrate dev --name=init && bun run prisma migrate deploy"
+    # TODO: Fix this
+    command: "prisma migrate dev --name=init"
     build: .
     env_file:
       - ./config/db.env.example
       - ./config/api.env.example
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
 
   backend:
     image: notification-service
@@ -36,12 +37,15 @@ services:
       - ./config/db.env.example
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   prometheus:
     image: prom/prometheus:v3.5.1
     restart: unless-stopped
-    ports:
-      - "9090:9090"
     volumes:
       - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
