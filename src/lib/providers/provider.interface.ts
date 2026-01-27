@@ -1,4 +1,4 @@
-import { Notification } from "../../generated/prisma";
+import { Notification } from "../../generated/prisma/client";
 
 export type SendResult<T = string> =
   | {

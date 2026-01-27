@@ -4,20 +4,20 @@ dotenv.config({ quiet: true });
 
 const envSchema = z.object({
   APP_PORT: z.coerce.number().positive().default(3000),
-  DATABASE_URL: z
-    .string()
-    .default(
-      "postgresql://notification_user:notification_password@localhost:5432/notification_db",
-    ),
-  REDIS_URL: z.string().default("localhost:6379"),
-  QUEUE_PREFIX: z.string().default("redis_mq"),
-  MAX_RETRIES: z.coerce.number().positive().default(3),
-  NUM_THREADS: z.coerce.number().positive().default(1),
-  BACKOFF_EXPONENTIAL_FACTOR: z.coerce.number().positive().default(2),
-  BACKOFF_BASE_DELAY_MS: z.coerce.number().positive().default(500),
-  REAPING_INTERVAL_MINS: z.coerce.number().positive().default(1),
-  RATE_LIMIT_REQUEUE_DELAY_MS: z.coerce.number().positive().default(1000),
-  RECONCILIATION_INTERVAL_MINS: z.coerce.number().positive().default(1),
+  POSTGRES_USER: z.string(),
+  POSTGRES_PASSWORD: z.string(),
+  POSTGRES_DB: z.string(),
+  POSTGRES_HOST: z.string(),
+  REDIS_URL: z.string(),
+  LOKI_URL: z.string(),
+  QUEUE_PREFIX: z.string(),
+  MAX_RETRIES: z.coerce.number().positive(),
+  NUM_THREADS: z.coerce.number().positive(),
+  BACKOFF_EXPONENTIAL_FACTOR: z.coerce.number().positive(),
+  BACKOFF_BASE_DELAY_MS: z.coerce.number().positive(),
+  REAPING_INTERVAL_MINS: z.coerce.number().positive(),
+  RATE_LIMIT_REQUEUE_DELAY_MS: z.coerce.number().positive(),
+  RECONCILIATION_INTERVAL_MINS: z.coerce.number().positive(),
 });
 
 const parsedConfig = envSchema.safeParse(process.env);

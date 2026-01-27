@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { Notification } from "../../generated/prisma";
+import { Notification } from "../../generated/prisma/client";
 import { IProvider, SendResult } from "./provider.interface";
 
 type EmailErrorType = "invalid_email" | "timeout";

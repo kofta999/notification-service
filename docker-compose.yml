@@ -1,46 +1,71 @@
 services:
-  redis:
-    image: "redis:latest"
+  migrations:
+    image: notification-service
+    command: "prisma migrate dev --name=init && bun run prisma migrate deploy"
+    build: .
+    env_file:
+      - ./config/db.env.example
+      - ./config/api.env.example
+    depends_on:
+      db:
+        condition: service_started
+
+  backend:
+    image: notification-service
+    build: .
     ports:
-      - "6379:6379"
+      - 3000:3000
+    env_file:
+      - ./config/db.env.example
+      - ./config/api.env.example
+    depends_on:
+      redis:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
+
+  redis:
+    image: redis:8.0
     volumes:
       - redis_data:/data
 
   db:
-    image: "postgres:15-alpine"
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-notification_user} # Default to notification_user if not set
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-notification_password} # Default to notification_password if not set
-      POSTGRES_DB: ${POSTGRES_DB:-notification_db} # Default to notification_db if not set
+    image: postgres:17
+    restart: unless-stopped
+    env_file:
+      - ./config/db.env.example
     volumes:
       - pg_data:/var/lib/postgresql/data
 
   prometheus:
-    image: prom/prometheus:latest
-    network_mode: "host"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
+    image: prom/prometheus:v3.5.1
+    restart: unless-stopped
     ports:
       - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
 
   grafana:
     image: grafana/grafana:latest
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    env_file:
+      - ./config/grafana.env.example
     ports:
-      - "3001:3000" # Grafana UI → http://localhost:3001
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/dashboard-definitions:/var/lib/grafana/dashboards
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
 
   loki:
     image: grafana/loki:latest
+    restart: unless-stopped
     command: -config.file=/etc/loki/local-config.yaml
-    ports:
-      - "3100:3100" # Loki API → http://localhost:3100
     volumes:
       - loki_data:/loki
 

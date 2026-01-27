@@ -8,7 +8,7 @@ import { register } from "prom-client";
 import { env } from "./env";
 import { createLogger } from "./lib/logger";
 import { createPrisma } from "./lib/db";
-import { Prisma } from "./generated/prisma";
+import { Prisma } from "./generated/prisma/client";
 
 const logger = createLogger("app");
 

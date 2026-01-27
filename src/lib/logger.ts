@@ -1,4 +1,5 @@
 import { pino, transport } from "pino";
+import { env } from "../env";
 
 const lokiTransport = transport({
   targets: [
@@ -7,7 +8,7 @@ const lokiTransport = transport({
       options: {
         batching: true,
         interval: 5,
-        host: "http://localhost:3100",
+        host: env.LOKI_URL,
       },
     },
     {

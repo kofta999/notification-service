@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import type { Notification, PrismaClient } from "../generated/prisma";
+import type { Notification, PrismaClient } from "../generated/prisma/client";
 import { env } from "../env";
 import { calculateBackoffDelay } from "../lib/util";
 import { Queue } from "../lib/queue";
