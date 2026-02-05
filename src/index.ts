@@ -40,16 +40,9 @@ for (let i = 0; i < env.NUM_THREADS; ++i) {
   logger.info({ workerId: i }, `Worker is running`);
 }
 
-process.on("SIGINT", async () => {
-  // 1. Stop accepting new requests
-  // 2. Wait for in-flight jobs to complete
-  // 3. Close DB connections
-  // 4. Close Redis connections
-  // 5. Exit
-  logger.info("SIGTERM received, starting graceful shutdown");
-
+async function gracefulShutdown() {
   await server.stop();
-  await Bun.sleep(3000);
+  await Bun.sleep(5000);
   if (server.pendingRequests > 0) {
     logger.warn(
       `${server.pendingRequests} pending requests remain after timeout, cancelling all requests`,
@@ -61,4 +54,14 @@ process.on("SIGINT", async () => {
   await redis.quit();
 
   process.exit(0);
+}
+
+process.on("SIGTERM", async () => {
+  logger.info("SIGTERM received, starting graceful shutdown");
+  await gracefulShutdown();
+});
+
+process.on("SIGINT", async () => {
+  logger.info("SIGINT received, starting graceful shutdown");
+  await gracefulShutdown();
 });
