@@ -1,8 +1,8 @@
 import { Queue } from "shared/queue";
-import { handleNotification } from "./lib/notification-handler";
+import { NotificationHandler } from "./lib/notification-handler";
 import Redis from "ioredis";
 import { workerMetrics } from "./lib/metrics";
-import { register } from "prom-client"
+import { register } from "prom-client";
 import { env } from "shared/env";
 import { createLogger } from "shared/logger";
 import { createPrisma } from "shared/db";
@@ -10,92 +10,121 @@ import { RateLimiter } from "shared/rate-limiter";
 import { setTimeout } from "node:timers";
 import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
+import type { PrismaClient, Notification } from "shared/prisma/client";
+import type { Logger } from "pino";
 
-const workerId = process.env.WORKER_ID ?? randomUUID();
-const workerLogger = createLogger(`worker-${workerId}`);
+class Worker {
+	private id: string;
+	private logger: Logger;
+	private db: PrismaClient;
+	private redis: Redis;
+	private queue: Queue;
+	private rateLimiters: Record<Notification["channel"], RateLimiter>;
+	private app: Hono;
 
-export async function workerLoop() {
-  const db = createPrisma();
-  const redis = new Redis(env.REDIS_URL);
-  const queue = new Queue({
-    queueName: "test",
-    redis,
-  });
-  const emailRateLimiter = new RateLimiter(redis, "rate:email", 100);
-  const smsRateLimiter = new RateLimiter(redis, "rate:sms", 100);
-  const pushRateLimiter = new RateLimiter(redis, "rate:push", 100);
+	constructor() {
+		this.id = process.env.WORKER_ID ?? randomUUID();
+		this.logger = createLogger(`worker-${this.id}`);
+		this.db = createPrisma();
+		this.redis = new Redis(env.REDIS_URL);
+		this.queue = new Queue({
+			queueName: "test",
+			redis: this.redis,
+		});
 
-  workerLogger.info("Worker started");
+		this.rateLimiters = {
+			email: new RateLimiter(this.redis, "rate:email", 100),
+			sms: new RateLimiter(this.redis, "rate:sms", 100),
+			push: new RateLimiter(this.redis, "rate:push", 100),
+		};
 
-  while (true) {
-    const notificationId = await queue.dequeue();
-    let currentRateLimiter: RateLimiter;
+		this.app = new Hono();
+	}
 
-    if (notificationId) {
-      workerMetrics.worker_jobs_picked_up_total.inc();
-      workerLogger.info({ notificationId }, "Dequeued notification");
-      try {
-        const maybeNotification = await db.notification.findUnique({
-          where: { id: notificationId },
-          select: { channel: true },
-        });
+	private setupMetricsServer() {
+		this.app.get("/metrics", async (c) => {
+			this.logger.info("Metrics endpoint accessed");
+			c.header("Content-Type", register.contentType);
+			const metrics = await register.metrics();
+			return c.text(metrics);
+		});
 
-        if (maybeNotification) {
-          switch (maybeNotification.channel) {
-            case "email": {
-              currentRateLimiter = emailRateLimiter;
-              break;
-            }
-            case "sms": {
-              currentRateLimiter = smsRateLimiter;
-              break;
-            }
-            case "push": {
-              currentRateLimiter = pushRateLimiter;
-              break;
-            }
-          }
+		Bun.serve({
+			port: 9001,
+			fetch: this.app.fetch,
+		});
 
-          if (await currentRateLimiter.take()) {
-            const notification = await db.notification.update({
-              where: { id: notificationId, status: "QUEUED" },
-              data: { status: "SENDING" },
-            });
+		this.logger.info("Metrics server running on port 9001");
+	}
 
-            handleNotification(notification, db, queue, workerLogger);
-          } else {
-            workerLogger.warn(
-              { notificationId },
-              `Rate limit exceeded for notification, re-queueing`,
-            );
-            setTimeout(
-              () => queue.enqueue(notificationId),
-              env.RATE_LIMIT_REQUEUE_DELAY_MS,
-            );
-          }
-        }
-      } catch (error) {
-        workerLogger.error(
-          { error, notificationId },
-          "Error processing notification",
-        );
-      }
-    }
-  }
+	public async start() {
+		this.logger.info("Worker starting...");
+		this.setupMetricsServer();
+		await this.workerLoop();
+	}
+
+	private async workerLoop() {
+		this.logger.info("Worker started");
+
+		while (true) {
+			const notificationId = await this.queue.dequeue();
+
+			if (notificationId) {
+				workerMetrics.worker_jobs_picked_up_total.inc();
+				const childLogger = this.logger.child({ notificationId });
+				childLogger.info("Dequeued notification");
+
+				try {
+					await this.processNotification(notificationId);
+				} catch (error) {
+					childLogger.error({ error }, "Error processing notification");
+				}
+			}
+		}
+	}
+
+	private async processNotification(notificationId: number) {
+		const maybeNotification = await this.db.notification.findUnique({
+			where: { id: notificationId },
+			select: { channel: true },
+		});
+
+		if (!maybeNotification) {
+			this.logger.warn({ notificationId }, "Notification not found, skipping");
+			return;
+		}
+
+		const rateLimiter = this.rateLimiters[maybeNotification.channel];
+
+		if (await rateLimiter.take()) {
+			const notification = await this.db.notification.update({
+				where: { id: notificationId, status: "QUEUED" },
+				data: { status: "SENDING" },
+			});
+
+			const handler = new NotificationHandler(
+				notification,
+				this.db,
+				this.queue,
+				this.logger,
+			);
+			await handler.handle();
+		} else {
+			this.requeue(
+				notificationId,
+				"Rate limit exceeded for notification, re-queueing",
+			);
+		}
+	}
+
+	private requeue(notificationId: number, reason: string) {
+		this.logger.warn({ notificationId }, reason);
+		setTimeout(
+			() => this.queue.enqueue(notificationId),
+			env.RATE_LIMIT_REQUEUE_DELAY_MS,
+		);
+	}
 }
 
-workerLoop();
-
-const app = new Hono()
-
-app.get("/metrics", async (c) => {
-  workerLogger.info("Metrics endpoint accessed");
-  c.header("Content-Type", register.contentType);
-  const metrics = await register.metrics();
-  return c.text(metrics);
-});
-
-Bun.serve({
-  port: 9001,
-  fetch: app.fetch
-})
+const worker = new Worker();
+await worker.start();

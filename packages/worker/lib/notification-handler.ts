@@ -6,87 +6,112 @@ import { Queue } from "shared/queue";
 import { workerMetrics } from "./metrics";
 import type { Logger } from "pino";
 import { EmailProvider } from "./providers/email.provider";
-import type { SendResult } from "./providers/provider.interface";
 import { PushNotificationProvider } from "./providers/push-notification.provider";
 import { SmsProvider } from "./providers/sms.provider";
+import type { IProvider, SendError } from "./providers/provider.interface";
 
-export async function handleNotification(
-  notification: Notification,
-  db: PrismaClient,
-  queue: Queue,
-  parentLogger: Logger,
-) {
-  const log = parentLogger.child({ notificationId: notification.id });
-  // Send notification
-  log.info({ channel: notification.channel }, `Sending notification`);
-  // const endTimer = metrics.worker_processing_duration_seconds.startTimer();
+export class NotificationHandler {
+	private providerMap: Record<
+		Notification["channel"],
+		() => IProvider<any>
+	> = {
+		email: () => new EmailProvider(),
+		sms: () => new SmsProvider(),
+		push: () => new PushNotificationProvider(),
+	};
 
-  try {
-    let result: SendResult | undefined;
+	constructor(
+		private notification: Notification,
+		private db: PrismaClient,
+		private queue: Queue,
+		private parentLogger: Logger,
+	) {}
 
-    if (notification.channel === "email") {
-      const emailProvider = new EmailProvider();
-      result = await emailProvider.send(notification);
-    } else if (notification.channel === "sms") {
-      const smsProvider = new SmsProvider();
-      result = await smsProvider.send(notification);
-    } else if (notification.channel === "push") {
-      const pushNotificationProvider = new PushNotificationProvider();
-      result = await pushNotificationProvider.send(notification);
-    }
+	async handle() {
+		const logger = this.parentLogger.child({
+			notificationId: this.notification.id,
+		});
+		logger.info({ channel: this.notification.channel }, "Sending notification");
 
-    if (result?.success) {
-      await db.notification.update({
-        where: { id: notification.id },
-        data: { status: "SENT" },
-      });
+		try {
+			const provider = this.getProvider(this.notification.channel);
+			const result = await provider.send(this.notification);
 
-      workerMetrics.worker_jobs_sent_total.inc();
+			if (result.success) {
+				await this.handleSuccess(logger);
+			} else {
+				await this.handleFailure(logger, result.error);
+			}
+		} catch (error) {
+			logger.error({ error }, "Unexpected error");
+		} finally {
+			logger.debug("Finished processing notification");
+		}
+	}
 
-      log.info(`Notification sent successfully`);
-    } else {
-      log.error(
-        { error: result?.error.type, retries: notification.retries },
-        `Error sending notification`,
-      );
+	private async handleSuccess(log: Logger) {
+		await this.db.notification.update({
+			where: { id: this.notification.id },
+			data: { status: "SENT" },
+		});
 
-      if (notification.retries < env.MAX_RETRIES) {
-        const delay = calculateBackoffDelay(
-          notification.retries,
-          env.BACKOFF_EXPONENTIAL_FACTOR,
-          env.BACKOFF_BASE_DELAY_MS,
-        );
+		workerMetrics.worker_jobs_sent_total.inc();
+		log.info("Notification sent successfully");
+	}
 
-        log.warn(
-          { delay, retries: notification.retries + 1 },
-          `Requeueing notification`,
-        );
-        await sleep(delay);
+	private async handleFailure(log: Logger, error: SendError<string>['error']) {
+		log.error(
+			{ error: error.type, retries: this.notification.retries },
+			"Error sending notification",
+		);
 
-        await db.notification.update({
-          where: { id: notification.id },
-          data: { retries: { increment: 1 }, status: "QUEUED" },
-        });
+		if (this.notification.retries < env.MAX_RETRIES) {
+			await this.requeueNotification(log);
+		} else {
+			await this.markAsFailed(log);
+		}
+	}
 
-        await queue.enqueue(notification.id);
+	private async requeueNotification(log: Logger) {
+		const delay = calculateBackoffDelay(
+			this.notification.retries,
+			env.BACKOFF_EXPONENTIAL_FACTOR,
+			env.BACKOFF_BASE_DELAY_MS,
+		);
 
-        workerMetrics.worker_jobs_retried_total.inc();
+		log.warn(
+			{ delay, retries: this.notification.retries + 1 },
+			"Requeueing notification",
+		);
+		await sleep(delay);
 
-        log.info(`Notification requeued successfully`);
-      } else {
-        log.error(`Notification failed after max retries`);
-        await db.notification.update({
-          where: { id: notification.id },
-          data: { status: "FAILED" },
-        });
+		await this.db.notification.update({
+			where: { id: this.notification.id },
+			data: { retries: { increment: 1 }, status: "QUEUED" },
+		});
 
-        workerMetrics.worker_jobs_failed_total.inc();
-      }
-    }
-  } catch (error) {
-    log.error({ error }, `Unexpected error`);
-  } finally {
-    // endTimer();
-    log.debug(`Finished processing notification`);
-  }
+		await this.queue.enqueue(this.notification.id);
+
+		workerMetrics.worker_jobs_retried_total.inc();
+
+		log.info("Notification requeued successfully");
+	}
+
+	private async markAsFailed(log: Logger) {
+		log.error("Notification failed after max retries");
+		await this.db.notification.update({
+			where: { id: this.notification.id },
+			data: { status: "FAILED" },
+		});
+
+		workerMetrics.worker_jobs_failed_total.inc();
+	}
+
+	private getProvider(channel: Notification["channel"]): IProvider<any> {
+		const providerFactory = this.providerMap[channel];
+		if (providerFactory) {
+			return providerFactory();
+		}
+		throw new Error(`Unsupported channel: ${channel}`);
+	}
 }

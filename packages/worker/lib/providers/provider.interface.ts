@@ -1,17 +1,19 @@
 import type { Notification } from "shared/prisma/client";
 
-export type SendResult<T = string> =
-  | {
-      success: false;
-      error: {
-        type: T;
-        message: string;
-      };
-    }
-  | {
+export type SendError<T extends string> =
+  {
+    success: false;
+    error: {
+      type: T;
+      message: string;
+    };
+  };
+
+export type SendSuccess =
+   {
       success: true;
     };
 
 export interface IProvider<ErrorType extends string> {
-  send(notification: Notification): Promise<SendResult<ErrorType>>;
+  send(notification: Notification): Promise<SendError<ErrorType> | SendSuccess>;
 }
