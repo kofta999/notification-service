@@ -40,7 +40,7 @@ export class NotificationHandler {
 			if (result.success) {
 				await this.handleSuccess(logger);
 			} else {
-				await this.handleFailure(logger, result.error);
+				await this.handleFailure(logger, result);
 			}
 		} catch (error) {
 			logger.error({ error }, "Unexpected error");
@@ -59,9 +59,9 @@ export class NotificationHandler {
 		log.info("Notification sent successfully");
 	}
 
-	private async handleFailure(log: Logger, error: SendError<string>['error']) {
+	private async handleFailure(log: Logger, error: SendError<string>) {
 		log.error(
-			{ error: error.type, retries: this.notification.retries },
+			{ error: error.error.type, retries: this.notification.retries },
 			"Error sending notification",
 		);
 
