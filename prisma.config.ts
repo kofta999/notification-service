@@ -1,5 +1,5 @@
 import { defineConfig } from "prisma/config";
-import { env } from "./src/env";
+import { env } from "shared/env";
 
 const DATABASE_URL = `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:5432/${env.POSTGRES_DB}?schema=public`;
 

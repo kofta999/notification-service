@@ -1,12 +1,13 @@
 {
   "name": "notification-service",
   "scripts": {
-    "dev": "bun --env-file=./config/api.env.example --env-file=./config/db.env.example run --hot src/index.ts",
-    "start": "bun run ./dist/index.js",
-    "build": "bun build --target bun src/index.ts --minify --outdir ./dist",
-    "migrate": "bun prisma migrate",
+    "dev": "bun --filter \"{api,worker}\" dev",
+    "start": "bun --filter \"{api,worker}\" start",
+    "build": "bun --filter \"*\" build",
+    "migrate:dev": "bun --env-file=./config/db.env.example --env-file=./config/api.env.example prisma migrate dev",
+    "migrate:deploy": "bun --env-file=./config/db.env.example --env-file=./config/api.env.example prisma migrate deploy",
     "typecheck": "bun run tsc",
-    "stressTest": "artillery run stress-test.yml"
+    "stressTest": "bun --filter api stressTest"
   },
   "dependencies": {},
   "workspaces": [
