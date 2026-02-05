@@ -1,14 +1,14 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import type { Notification, PrismaClient } from "../generated/prisma/client";
-import { env } from "../env";
-import { calculateBackoffDelay } from "../lib/util";
-import { Queue } from "../lib/queue";
+import type { Notification, PrismaClient } from "shared/prisma/client";
+import { env } from "shared/env";
+import { calculateBackoffDelay } from "./util";
+import { Queue } from "shared/queue";
 import { workerMetrics } from "./metrics";
 import type { Logger } from "pino";
-import { EmailProvider } from "../lib/providers/email.provider";
-import { SmsProvider } from "../lib/providers/sms.provider";
-import { PushNotificationProvider } from "../lib/providers/push-notification.provider";
-import { SendResult } from "../lib/providers/provider.interface";
+import { EmailProvider } from "./providers/email.provider";
+import type { SendResult } from "./providers/provider.interface";
+import { PushNotificationProvider } from "./providers/push-notification.provider";
+import { SmsProvider } from "./providers/sms.provider";
 
 export async function handleNotification(
   notification: Notification,

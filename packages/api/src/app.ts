@@ -1,14 +1,14 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { NotifyRequestSchema } from "./lib/schemas";
-import { Queue } from "./lib/queue";
+import { Queue } from "shared/queue";
 import Redis from "ioredis";
-import { metrics } from "./lib/metrics";
+import { metrics } from "shared/metrics";
 import { register } from "prom-client";
-import { env } from "./env";
-import { createLogger } from "./lib/logger";
-import { createPrisma } from "./lib/db";
-import { Prisma } from "./generated/prisma/client";
+import { env } from "shared/env";
+import { createLogger } from "shared/logger";
+import { createPrisma } from "shared/db";
+import type { Prisma } from "shared/prisma/client";
 
 const logger = createLogger("app");
 

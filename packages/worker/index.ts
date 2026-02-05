@@ -1,14 +1,14 @@
-import { isMainThread, workerData } from "node:worker_threads";
-import { Queue } from "../lib/queue";
-import { handleNotification } from "./notification-handler";
+import { Queue } from "shared/queue";
+import { handleNotification } from "./lib/notification-handler";
 import Redis from "ioredis";
 import "./submit-metrics";
-import { workerMetrics } from "./metrics";
-import { env } from "../env";
-import { createLogger } from "../lib/logger";
-import { createPrisma } from "../lib/db";
-import { RateLimiter } from "../lib/rate-limiter";
+import { workerMetrics } from "./lib/metrics";
+import { env } from "shared/env";
+import { createLogger } from "shared/logger";
+import { createPrisma } from "shared/db";
+import { RateLimiter } from "shared/rate-limiter";
 import { setTimeout } from "node:timers";
+import { randomUUID } from "node:crypto";
 
 export async function workerLoop() {
   const db = createPrisma();
@@ -17,13 +17,13 @@ export async function workerLoop() {
     queueName: "test",
     redis,
   });
-  const { workerId } = workerData as { workerId: number };
+  const workerId = process.env.WORKER_ID ?? randomUUID();
   const workerLogger = createLogger(`worker-${workerId}`);
   const emailRateLimiter = new RateLimiter(redis, "rate:email", 100);
   const smsRateLimiter = new RateLimiter(redis, "rate:sms", 100);
   const pushRateLimiter = new RateLimiter(redis, "rate:push", 100);
 
-  workerLogger.info(`Worker ${workerId} started`);
+  workerLogger.info("Worker started");
 
   while (true) {
     const notificationId = await queue.dequeue();
@@ -82,6 +82,4 @@ export async function workerLoop() {
   }
 }
 
-if (!isMainThread) {
-  workerLoop();
-}
+workerLoop();
