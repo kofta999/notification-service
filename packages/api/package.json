@@ -4,10 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun --env-file=./config/api.env.example --env-file=./config/db.env.example run --hot src/index.ts",
+    "dev": "bun --env-file=../../config/api.env.example --env-file=../../config/db.env.example run --hot src/index.ts",
     "start": "bun run ./dist/index.js",
     "build": "bun build --target bun src/index.ts --minify --outdir ./dist",
-    "stressTest": "artillery run stress-test.yml"
+    "stressTest": "artillery run ../../stress-test.yml"
   },
   "dependencies": {
     "shared": "workspace:*",
