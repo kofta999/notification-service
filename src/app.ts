@@ -14,9 +14,10 @@ const logger = createLogger("app");
 
 const app = new Hono();
 export const db = createPrisma();
+export const redis = new Redis(env.REDIS_URL);
 export const queue = new Queue({
   queueName: "test",
-  redis: new Redis(env.REDIS_URL),
+  redis,
 });
 
 app.get("/", (c) => {

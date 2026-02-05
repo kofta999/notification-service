@@ -1,5 +1,4 @@
-import { serve } from "@hono/node-server";
-import app from "./app";
+import app, { queue, redis } from "./app";
 import "./jobs/reaper";
 import "./jobs/reconciler";
 import { env } from "./env";
@@ -12,7 +11,7 @@ import { createLogger } from "./lib/logger";
 
 const logger = createLogger("main");
 
-serve({ port: env.APP_PORT, fetch: app.fetch });
+const server = Bun.serve({ port: env.APP_PORT, fetch: app.fetch });
 logger.info(`Server up and listening on port ${env.APP_PORT}`);
 
 const workerPath = "./src/worker/worker-loop.ts";
@@ -40,3 +39,26 @@ for (let i = 0; i < env.NUM_THREADS; ++i) {
   );
   logger.info({ workerId: i }, `Worker is running`);
 }
+
+process.on("SIGINT", async () => {
+  // 1. Stop accepting new requests
+  // 2. Wait for in-flight jobs to complete
+  // 3. Close DB connections
+  // 4. Close Redis connections
+  // 5. Exit
+  logger.info("SIGTERM received, starting graceful shutdown");
+
+  await server.stop();
+  await Bun.sleep(3000);
+  if (server.pendingRequests > 0) {
+    logger.warn(
+      `${server.pendingRequests} pending requests remain after timeout, cancelling all requests`,
+    );
+    await server.stop(true);
+  }
+
+  await prisma?.$disconnect();
+  await redis.quit();
+
+  process.exit(0);
+});
