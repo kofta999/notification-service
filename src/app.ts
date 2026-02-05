@@ -91,4 +91,14 @@ app.get("/metrics", async (c) => {
   return c.text(metrics);
 });
 
+app.get("/health", async (c) => {
+  try {
+    await Promise.all([db.$queryRaw`SELECT 1`, redis.ping()]);
+
+    return c.json({ status: "healthy" }, 200);
+  } catch (error) {
+    return c.json({ status: "unhealthy", error }, 503);
+  }
+});
+
 export default app;
