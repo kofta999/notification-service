@@ -1,14 +1,18 @@
 import { Queue } from "shared/queue";
 import { handleNotification } from "./lib/notification-handler";
 import Redis from "ioredis";
-import "./submit-metrics";
 import { workerMetrics } from "./lib/metrics";
+import { register } from "prom-client"
 import { env } from "shared/env";
 import { createLogger } from "shared/logger";
 import { createPrisma } from "shared/db";
 import { RateLimiter } from "shared/rate-limiter";
 import { setTimeout } from "node:timers";
 import { randomUUID } from "node:crypto";
+import { Hono } from "hono";
+
+const workerId = process.env.WORKER_ID ?? randomUUID();
+const workerLogger = createLogger(`worker-${workerId}`);
 
 export async function workerLoop() {
   const db = createPrisma();
@@ -17,8 +21,6 @@ export async function workerLoop() {
     queueName: "test",
     redis,
   });
-  const workerId = process.env.WORKER_ID ?? randomUUID();
-  const workerLogger = createLogger(`worker-${workerId}`);
   const emailRateLimiter = new RateLimiter(redis, "rate:email", 100);
   const smsRateLimiter = new RateLimiter(redis, "rate:sms", 100);
   const pushRateLimiter = new RateLimiter(redis, "rate:push", 100);
@@ -83,3 +85,17 @@ export async function workerLoop() {
 }
 
 workerLoop();
+
+const app = new Hono()
+
+app.get("/metrics", async (c) => {
+  workerLogger.info("Metrics endpoint accessed");
+  c.header("Content-Type", register.contentType);
+  const metrics = await register.metrics();
+  return c.text(metrics);
+});
+
+Bun.serve({
+  port: 9001,
+  fetch: app.fetch
+})
