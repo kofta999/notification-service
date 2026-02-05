@@ -1,4 +1,4 @@
 scrape_configs:
   - job_name: "notifications-service"
     static_configs:
-      - targets: ["backend:3000", "worker:9001"]
+      - targets: ["api:3000", "worker:9001"]
