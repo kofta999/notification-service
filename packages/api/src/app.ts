@@ -9,6 +9,8 @@ import { env } from "shared/env";
 import { createLogger } from "shared/logger";
 import { createPrisma } from "shared/db";
 import type { Prisma } from "shared/prisma/client";
+import { apiKeyAuth } from "./middleware/auth";
+import { apiRateLimit } from "./middleware/rate-limit";
 
 const logger = createLogger("app");
 
@@ -24,7 +26,7 @@ app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
 
-app.post("/notify", zValidator("json", NotifyRequestSchema), async (c) => {
+app.post("/notify", apiKeyAuth, apiRateLimit, zValidator("json", NotifyRequestSchema), async (c) => {
   // Validate
   const body = c.req.valid("json");
   logger.info({ body }, "Received new notification request");
@@ -59,7 +61,7 @@ app.post("/notify", zValidator("json", NotifyRequestSchema), async (c) => {
   }
 });
 
-app.get("/status/:id", async (c) => {
+app.get("/status/:id", apiKeyAuth, async (c) => {
   const id = parseInt(c.req.param("id"), 10);
   logger.info({ notificationId: id }, "Fetching notification status");
 

@@ -40,3 +40,16 @@ model Notification {
 
   @@index([id, status])
 }
+
+model ApiKey {
+  id         Int       @id @default(autoincrement())
+  key        String    @unique
+  name       String
+  isActive   Boolean   @default(true)
+  rateLimit  Int       @default(100)
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+
+  @@index([key, isActive])
+}

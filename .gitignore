@@ -3,5 +3,5 @@ node_modules/
 
 packages/shared/generated/prisma
 prisma/dev.db
-.env
+config/*.env
 dist
