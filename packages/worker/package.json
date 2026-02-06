@@ -11,7 +11,7 @@
     "@types/bun": "latest"
   },
   "scripts": {
-    "dev": "bun --env-file=../../config/api.env.example --env-file=../../config/db.env.example run --hot index.ts",
+    "dev": "bun --env-file=../../config/api.env --env-file=../../config/db.env run --hot index.ts",
     "start": "bun run ./dist/index.js",
     "build": "bun build --target bun index.ts --minify --outdir ./dist"
   }

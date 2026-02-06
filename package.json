@@ -4,8 +4,8 @@
     "dev": "bun --filter \"{api,worker}\" dev",
     "start": "bun --filter \"{api,worker}\" start",
     "build": "bun --filter \"*\" build",
-    "migrate:dev": "bun --env-file=./config/db.env.example --env-file=./config/api.env.example prisma migrate dev",
-    "migrate:deploy": "bun --env-file=./config/db.env.example --env-file=./config/api.env.example prisma migrate deploy",
+    "migrate:dev": "bun --env-file=./config/db.env --env-file=./config/api.env prisma migrate dev",
+    "migrate:deploy": "bun --env-file=./config/db.env --env-file=./config/api.env prisma migrate deploy",
     "typecheck": "bun run tsc",
     "stressTest": "bun --filter api stressTest"
   },

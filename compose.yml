@@ -4,8 +4,8 @@ services:
     command: "bun run migrate:deploy"
     build: .
     env_file:
-      - ./config/db.env
-      - ./config/api.env
+      - ./config/db.env.example
+      - ./config/api.env.example
     depends_on:
       db:
         condition: service_healthy
@@ -16,8 +16,8 @@ services:
     ports:
       - 3000:3000
     env_file:
-      - ./config/db.env
-      - ./config/api.env
+      - ./config/db.env.example
+      - ./config/api.env.example
     command: "bun --filter=api start"
     depends_on:
       redis:
@@ -31,8 +31,8 @@ services:
     ports:
       - 9001:9001
     env_file:
-      - ./config/db.env
-      - ./config/api.env
+      - ./config/db.env.example
+      - ./config/api.env.example
     command: "bun --filter=worker start"
     depends_on:
       redis:
@@ -49,11 +49,11 @@ services:
     image: postgres:17
     restart: unless-stopped
     env_file:
-      - ./config/db.env
+      - ./config/db.env.example
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d notification_db"]
+      test: ["CMD-SHELL", "pg_isready -U notification_user -d notification_db"]
       interval: 5s
       timeout: 5s
       retries: 5
