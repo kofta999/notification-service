@@ -4,8 +4,8 @@ services:
     command: "bun run migrate:deploy"
     build: .
     env_file:
-      - ./config/db.env.example
-      - ./config/api.env.example
+      - ./config/db.env
+      - ./config/api.env
     depends_on:
       db:
         condition: service_healthy
@@ -16,8 +16,8 @@ services:
     ports:
       - 3000:3000
     env_file:
-      - ./config/db.env.example
-      - ./config/api.env.example
+      - ./config/db.env
+      - ./config/api.env
     command: "bun --filter=api start"
     depends_on:
       redis:
@@ -31,8 +31,8 @@ services:
     ports:
       - 9001:9001
     env_file:
-      - ./config/db.env.example
-      - ./config/api.env.example
+      - ./config/db.env
+      - ./config/api.env
     command: "bun --filter=worker start"
     depends_on:
       redis:
@@ -49,7 +49,7 @@ services:
     image: postgres:17
     restart: unless-stopped
     env_file:
-      - ./config/db.env.example
+      - ./config/db.env
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -69,7 +69,7 @@ services:
     image: grafana/grafana:latest
     restart: unless-stopped
     env_file:
-      - ./config/grafana.env.example
+      - ./config/grafana.env
     ports:
       - 3001:3000
     depends_on:

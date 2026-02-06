@@ -65,7 +65,7 @@ export class NotificationHandler {
 			"Error sending notification",
 		);
 
-		if (error.retryable && this.notification.retries < env.MAX_RETRIES) {
+		if (error.retryable && this.notification.retries < env.WORKER_NOTI_MAX_RETRIES) {
 			await this.requeueNotification(log);
 		} else {
 			await this.markAsFailed(log);
@@ -75,8 +75,8 @@ export class NotificationHandler {
 	private async requeueNotification(log: Logger) {
 		const delay = calculateBackoffDelay(
 			this.notification.retries,
-			env.BACKOFF_EXPONENTIAL_FACTOR,
-			env.BACKOFF_BASE_DELAY_MS,
+			env.WORKER_BACKOFF_EXPONENTIAL_FACTOR,
+			env.WORKER_BACKOFF_BASE_DELAY_MS,
 		);
 
 		log.warn(

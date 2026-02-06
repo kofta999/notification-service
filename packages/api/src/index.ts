@@ -6,8 +6,8 @@ import { createLogger } from "shared/logger";
 
 const logger = createLogger("API");
 
-const server = Bun.serve({ port: env.APP_PORT, fetch: app.fetch });
-logger.info(`Server up and listening on port ${env.APP_PORT}`);
+const server = Bun.serve({ port: env.API_APP_PORT, fetch: app.fetch });
+logger.info(`Server up and listening on port ${env.API_APP_PORT}`);
 
 async function gracefulShutdown() {
   await server.stop();

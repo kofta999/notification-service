@@ -21,6 +21,7 @@ class Worker {
 	private queue: Queue;
 	private rateLimiters: Record<Notification["channel"], RateLimiter>;
 	private app: Hono;
+	private CONCURRENCY: number
 
 	constructor() {
 		this.id = process.env.WORKER_ID ?? randomUUID();
@@ -30,6 +31,7 @@ class Worker {
 		this.queue = new Queue({
 			queueName: "test",
 			redis: this.redis,
+			timeoutSecs: 5,
 		});
 
 		this.rateLimiters = {
@@ -39,6 +41,7 @@ class Worker {
 		};
 
 		this.app = new Hono();
+    this.CONCURRENCY = env.WORKER_CONCURRENCY;
 	}
 
 	private setupMetricsServer() {
@@ -64,9 +67,14 @@ class Worker {
 	}
 
 	private async workerLoop() {
-		this.logger.info("Worker started");
+		this.logger.info(`Worker started, concurrency count: ${this.CONCURRENCY}`);
+		const activeJobs = new Set<Promise<void>>();
 
 		while (true) {
+			if (activeJobs.size >= this.CONCURRENCY) {
+				await Promise.race(activeJobs);
+			}
+
 			const notificationId = await this.queue.dequeue();
 
 			if (notificationId) {
@@ -74,11 +82,15 @@ class Worker {
 				const childLogger = this.logger.child({ notificationId });
 				childLogger.info("Dequeued notification");
 
-				try {
-					await this.processNotification(notificationId);
-				} catch (error) {
-					childLogger.error({ error }, "Error processing notification");
-				}
+				const job = this.processNotification(notificationId)
+					.catch((error) => {
+						childLogger.error({ error }, "Error processing notification");
+					})
+					.finally(() => {
+						activeJobs.delete(job);
+					});
+
+				activeJobs.add(job);
 			}
 		}
 	}
@@ -121,7 +133,7 @@ class Worker {
 		this.logger.warn({ notificationId }, reason);
 		setTimeout(
 			() => this.queue.enqueue(notificationId),
-			env.RATE_LIMIT_REQUEUE_DELAY_MS,
+			env.WORKER_RATE_LIMIT_REQUEUE_DELAY_MS,
 		);
 	}
 }
