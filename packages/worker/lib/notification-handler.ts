@@ -8,12 +8,13 @@ import type { Logger } from "pino";
 import { EmailProvider } from "./providers/email.provider";
 import { PushNotificationProvider } from "./providers/push-notification.provider";
 import { SmsProvider } from "./providers/sms.provider";
-import type { IProvider, SendError } from "./providers/provider.interface";
+import type { IProvider } from "./providers/provider.interface";
+import { NotificationError } from "shared/errors";
 
 export class NotificationHandler {
 	private providerMap: Record<
 		Notification["channel"],
-		() => IProvider<any>
+		() => IProvider
 	> = {
 		email: () => new EmailProvider(),
 		sms: () => new SmsProvider(),
@@ -35,15 +36,14 @@ export class NotificationHandler {
 
 		try {
 			const provider = this.getProvider(this.notification.channel);
-			const result = await provider.send(this.notification);
-
-			if (result.success) {
-				await this.handleSuccess(logger);
-			} else {
-				await this.handleFailure(logger, result);
-			}
+			await provider.send(this.notification);
+			await this.handleSuccess(logger);
 		} catch (error) {
-			logger.error({ error }, "Unexpected error");
+			if (error instanceof NotificationError) {
+				await this.handleFailure(logger, error);
+			} else {
+				logger.error({ error }, "Unexpected error");
+			}
 		} finally {
 			logger.debug("Finished processing notification");
 		}
@@ -59,13 +59,13 @@ export class NotificationHandler {
 		log.info("Notification sent successfully");
 	}
 
-	private async handleFailure(log: Logger, error: SendError<string>) {
+	private async handleFailure(log: Logger, error: NotificationError) {
 		log.error(
-			{ error: error.error.type, retries: this.notification.retries },
+			{ error: error.message, retries: this.notification.retries },
 			"Error sending notification",
 		);
 
-		if (this.notification.retries < env.MAX_RETRIES) {
+		if (error.retryable && this.notification.retries < env.MAX_RETRIES) {
 			await this.requeueNotification(log);
 		} else {
 			await this.markAsFailed(log);
@@ -107,7 +107,7 @@ export class NotificationHandler {
 		workerMetrics.worker_jobs_failed_total.inc();
 	}
 
-	private getProvider(channel: Notification["channel"]): IProvider<any> {
+	private getProvider(channel: Notification["channel"]): IProvider {
 		const providerFactory = this.providerMap[channel];
 		if (providerFactory) {
 			return providerFactory();

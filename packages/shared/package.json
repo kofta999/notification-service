@@ -10,7 +10,8 @@
     "./queue": "./lib/queue.ts",
     "./rate-limiter": "./lib/rate-limiter.ts",
     "./env": "./env.ts",
-    "./prisma/client": "./generated/prisma/client.ts"
+    "./prisma/client": "./generated/prisma/client.ts",
+    "./errors": "./lib/errors.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",

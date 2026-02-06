@@ -18,6 +18,10 @@ export function createPrisma(): PrismaClient {
     password: env.POSTGRES_PASSWORD,
     database: env.POSTGRES_DB,
     host: env.POSTGRES_HOST,
+    max: 20, // Maximum pool size
+    min: 5,  // Minimum pool size
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
   });
 
   if (process.env.NODE_ENV === "production") {

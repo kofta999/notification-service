@@ -1,23 +1,17 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import { ThirdPartyProviderError } from "shared/errors";
 import type { Notification } from "shared/prisma/client";
-import type { IProvider, SendError, SendSuccess } from "./provider.interface";
+import type { IProvider } from "./provider.interface";
 
-type PushNotificationErrorType = "timeout";
-
-export class PushNotificationProvider implements IProvider<PushNotificationErrorType> {
-  async send(
-    notification: Notification,
-  ): Promise<SendError<PushNotificationErrorType> | SendSuccess> {
+export class PushNotificationProvider implements IProvider {
+  async send(notification: Notification): Promise<void> {
     const sleepDuration = Math.random() * 10000;
     await sleep(sleepDuration);
 
     if (sleepDuration >= 5000) {
-      return {
-        success: false,
-        error: { type: "timeout", message: "Failed to send notification" },
-      };
+      throw new ThirdPartyProviderError("Failed to send notification", {
+        retryable: true,
+      });
     }
-
-    return { success: true };
   }
 }

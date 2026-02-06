@@ -10,14 +10,15 @@ interface IQueue<T> {
 type QueueConfig = {
   redis: Redis;
   queueName: string;
+  timeoutSecs: number
 };
 
 export class Queue implements IQueue<number> {
   private config: QueueConfig;
-  private TIMEOUT = 5;
 
+  // 5s is default timeout if not provided
   constructor(config: QueueConfig) {
-    this.config = config;
+    this.config = config
   }
 
   async enqueue(...items: number[]): Promise<void> {
@@ -30,7 +31,7 @@ export class Queue implements IQueue<number> {
   async dequeue(): Promise<number | null> {
     const res = await this.config.redis.brpop(
       this.generateQueueKey(),
-      this.TIMEOUT,
+      this.config.timeoutSecs,
     );
 
     if (res) {

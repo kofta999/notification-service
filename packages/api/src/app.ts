@@ -11,15 +11,20 @@ import { createPrisma } from "shared/db";
 import type { Prisma } from "shared/prisma/client";
 import { apiKeyAuth } from "./middleware/auth";
 import { apiRateLimit } from "./middleware/rate-limit";
+import { errorHandler } from "./middleware/error-handler";
+import { InvalidPayloadError } from "shared/errors";
 
 const logger = createLogger("app");
 
 const app = new Hono();
+app.use(errorHandler);
+
 export const db = createPrisma();
 export const redis = new Redis(env.REDIS_URL);
 export const queue = new Queue({
   queueName: "test",
   redis,
+  timeoutSecs: 5
 });
 
 app.get("/", (c) => {
@@ -57,7 +62,7 @@ app.post("/notify", apiKeyAuth, apiRateLimit, zValidator("json", NotifyRequestSc
   } catch (error) {
     logger.error({ error }, "Failed to process and enqueue notification");
     metrics.api_jobs_enqueue_failed_total.inc();
-    throw error;
+    throw new InvalidPayloadError("Failed to process and enqueue notification", { cause: error as Error });
   }
 });
 
