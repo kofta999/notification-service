@@ -1,6 +1,6 @@
 import { z } from "zod";
 import * as dotenv from "dotenv";
-dotenv.config({ quiet: true });
+dotenv.config({ quiet: true, path: ["./config/api.env", "./config/db.env"] });
 
 const envSchema = z.object({
   APP_PORT: z.coerce.number().positive().default(3000),
