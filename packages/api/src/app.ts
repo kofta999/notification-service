@@ -1,22 +1,23 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { NotifyRequestSchema } from "./lib/schemas";
-import { Queue } from "./lib/queue";
+import { Queue } from "shared/queue";
 import Redis from "ioredis";
-import { metrics } from "./lib/metrics";
+import { metrics } from "shared/metrics";
 import { register } from "prom-client";
-import { env } from "./env";
-import { createLogger } from "./lib/logger";
-import { createPrisma } from "./lib/db";
-import { Prisma } from "./generated/prisma/client";
+import { env } from "shared/env";
+import { createLogger } from "shared/logger";
+import { createPrisma } from "shared/db";
+import type { Prisma } from "shared/prisma/client";
 
 const logger = createLogger("app");
 
 const app = new Hono();
 export const db = createPrisma();
+export const redis = new Redis(env.REDIS_URL);
 export const queue = new Queue({
   queueName: "test",
-  redis: new Redis(env.REDIS_URL),
+  redis,
 });
 
 app.get("/", (c) => {
@@ -88,6 +89,16 @@ app.get("/metrics", async (c) => {
   c.header("Content-Type", register.contentType);
   const metrics = await register.metrics();
   return c.text(metrics);
+});
+
+app.get("/health", async (c) => {
+  try {
+    await Promise.all([db.$queryRaw`SELECT 1`, redis.ping()]);
+
+    return c.json({ status: "healthy" }, 200);
+  } catch (error) {
+    return c.json({ status: "unhealthy", error }, 503);
+  }
 });
 
 export default app;

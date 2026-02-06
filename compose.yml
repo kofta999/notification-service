@@ -1,8 +1,7 @@
 services:
   migrations:
     image: notification-service
-    # TODO: Fix this
-    command: "prisma migrate dev --name=init"
+    command: "bun run migrate:deploy"
     build: .
     env_file:
       - ./config/db.env.example
@@ -11,7 +10,7 @@ services:
       db:
         condition: service_healthy
 
-  backend:
+  api:
     image: notification-service
     build: .
     ports:
@@ -19,6 +18,22 @@ services:
     env_file:
       - ./config/db.env.example
       - ./config/api.env.example
+    command: "bun --filter=api start"
+    depends_on:
+      redis:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
+
+  worker:
+    image: notification-service
+    build: .
+    ports:
+      - 9001:9001
+    env_file:
+      - ./config/db.env.example
+      - ./config/api.env.example
+    command: "bun --filter=worker start"
     depends_on:
       redis:
         condition: service_started
@@ -56,7 +71,7 @@ services:
     env_file:
       - ./config/grafana.env.example
     ports:
-      - "3001:3000"
+      - 3001:3000
     depends_on:
       - prometheus
       - loki

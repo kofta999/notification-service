@@ -1,6 +1,5 @@
 // metrics.ts
 import { Counter, Registry, Gauge, register } from "prom-client";
-import { workerMetrics } from "../worker/metrics";
 
 // Default metrics (Node.js event loop, memory, GC, etc.)
 //collectDefaultMetrics({ register });
@@ -68,8 +67,6 @@ export const metrics = {
   reaper_runs_total,
   reaper_stuck_jobs_detected_total,
   reaper_stuck_jobs_requeued_total,
-  // Worker
-  ...workerMetrics,
   // Reconciler
   reconciler_runs_total,
   reconciler_jobs_detected_total,

@@ -1,7 +1,6 @@
 import { defineConfig } from "prisma/config";
-import { env } from "./src/env";
 
-const DATABASE_URL = `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:5432/${env.POSTGRES_DB}?schema=public`;
+const DATABASE_URL = `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:5432/${process.env.POSTGRES_DB}?schema=public`;
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
