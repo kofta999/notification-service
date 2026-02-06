@@ -10,7 +10,7 @@ COPY --chown=appuser:appgroup packages/api/package.json ./packages/api/
 COPY --chown=appuser:appgroup packages/worker/package.json ./packages/worker/
 COPY --chown=appuser:appgroup packages/shared/package.json ./packages/shared/
 
-RUN bun install
+RUN bun install --production
 
 COPY --chown=appuser:appgroup . .
 
