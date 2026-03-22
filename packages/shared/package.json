@@ -7,7 +7,7 @@
     "./db": "./lib/db.ts",
     "./logger": "./lib/logger.ts",
     "./metrics": "./lib/metrics.ts",
-    "./queue": "./lib/queue.ts",
+    "./queue": "./lib/queue/index.ts",
     "./rate-limiter": "./lib/rate-limiter.ts",
     "./env": "./env.ts",
     "./prisma/client": "./generated/prisma/client.ts",

@@ -1,5 +1,4 @@
 import app, { redis } from "./app";
-import "./jobs/reaper";
 import "./jobs/reconciler";
 import { env } from "shared/env";
 import { createLogger } from "shared/logger";
@@ -25,12 +24,12 @@ async function gracefulShutdown() {
   process.exit(0);
 }
 
-process.on("SIGTERM", async () => {
-  logger.info("SIGTERM received, starting graceful shutdown");
-  await gracefulShutdown();
-});
+// process.on("SIGTERM", async () => {
+//   logger.info("SIGTERM received, starting graceful shutdown");
+//   await gracefulShutdown();
+// });
 
-process.on("SIGINT", async () => {
-  logger.info("SIGINT received, starting graceful shutdown");
-  await gracefulShutdown();
-});
+// process.on("SIGINT", async () => {
+//   logger.info("SIGINT received, starting graceful shutdown");
+//   await gracefulShutdown();
+// });

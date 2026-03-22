@@ -1,4 +1,5 @@
-import { Queue } from "shared/queue";
+import { SqsQueue } from "shared/queue";
+import { SQSClient } from "@aws-sdk/client-sqs"
 import { NotificationHandler } from "./lib/notification-handler";
 import Redis from "ioredis";
 import { workerMetrics } from "./lib/metrics";
@@ -7,18 +8,18 @@ import { env } from "shared/env";
 import { createLogger } from "shared/logger";
 import { createPrisma } from "shared/db";
 import { RateLimiter } from "shared/rate-limiter";
-import { setTimeout } from "node:timers";
 import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 import type { PrismaClient, Notification } from "shared/prisma/client";
 import type { Logger } from "pino";
+import type { IQueue } from "../shared/lib/queue/queue.interface";
 
 class Worker {
 	private id: string;
 	private logger: Logger;
 	private db: PrismaClient;
 	private redis: Redis;
-	private queue: Queue;
+	private queue: SqsQueue;
 	private rateLimiters: Record<Notification["channel"], RateLimiter>;
 	private app: Hono;
 	private CONCURRENCY: number
@@ -28,11 +29,7 @@ class Worker {
 		this.logger = createLogger(`worker-${this.id}`);
 		this.db = createPrisma();
 		this.redis = new Redis(env.REDIS_URL);
-		this.queue = new Queue({
-			queueName: "test",
-			redis: this.redis,
-			timeoutSecs: 5,
-		});
+		this.queue = new SqsQueue("https://sqs.us-east-1.amazonaws.com/903050880181/noti-service-sqs", new SQSClient({region: "us-east-1"}))
 
 		this.rateLimiters = {
 			email: new RateLimiter(this.redis, "rate:email", 100),
@@ -75,14 +72,18 @@ class Worker {
 				await Promise.race(activeJobs);
 			}
 
-			const notificationId = await this.queue.dequeue();
+			const dequeuedJob = await this.queue.dequeue();
+      if (!dequeuedJob) continue;
+      const {id: notificationId, receiptHandle} = dequeuedJob
 
-			if (notificationId) {
 				workerMetrics.worker_jobs_picked_up_total.inc();
 				const childLogger = this.logger.child({ notificationId });
 				childLogger.info("Dequeued notification");
 
-				const job = this.processNotification(notificationId)
+      const job = this.processNotification(notificationId)
+          .then(async () => {
+            await this.queue.ack(receiptHandle);
+          })
 					.catch((error) => {
 						childLogger.error({ error }, "Error processing notification");
 					})
@@ -91,7 +92,6 @@ class Worker {
 					});
 
 				activeJobs.add(job);
-			}
 		}
 	}
 
@@ -122,19 +122,10 @@ class Worker {
 			);
 			await handler.handle();
 		} else {
-			this.requeue(
-				notificationId,
-				"Rate limit exceeded for notification, re-queueing",
+			throw new Error(
+				"Rate limit exceeded",
 			);
 		}
-	}
-
-	private requeue(notificationId: number, reason: string) {
-		this.logger.warn({ notificationId }, reason);
-		setTimeout(
-			() => this.queue.enqueue(notificationId),
-			env.WORKER_RATE_LIMIT_REQUEUE_DELAY_MS,
-		);
 	}
 }
 

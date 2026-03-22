@@ -1,11 +1,6 @@
 import Redis from "ioredis";
-import { formatMqKey } from "./util";
-
-interface IQueue<T> {
-  enqueue(...items: T[]): Promise<void>;
-  dequeue(): Promise<T | null>;
-  length(): Promise<number>;
-}
+import { formatMqKey } from "../util";
+import type { IQueue } from "./queue.interface";
 
 type QueueConfig = {
   redis: Redis;
@@ -13,7 +8,7 @@ type QueueConfig = {
   timeoutSecs: number
 };
 
-export class Queue implements IQueue<number> {
+export class RedisQueue implements IQueue<number> {
   private config: QueueConfig;
 
   // 5s is default timeout if not provided

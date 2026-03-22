@@ -2,7 +2,6 @@ import { setTimeout as sleep } from "node:timers/promises";
 import type { Notification, PrismaClient } from "shared/prisma/client";
 import { env } from "shared/env";
 import { calculateBackoffDelay } from "./util";
-import { Queue } from "shared/queue";
 import { workerMetrics } from "./metrics";
 import type { Logger } from "pino";
 import { EmailProvider } from "./providers/email.provider";
@@ -10,6 +9,8 @@ import { PushNotificationProvider } from "./providers/push-notification.provider
 import { SmsProvider } from "./providers/sms.provider";
 import type { IProvider } from "./providers/provider.interface";
 import { NotificationError } from "shared/errors";
+import type { IQueue } from "../../shared/lib/queue/queue.interface";
+import type { SqsQueue } from "shared/queue";
 
 export class NotificationHandler {
 	private providerMap: Record<
@@ -24,7 +25,7 @@ export class NotificationHandler {
 	constructor(
 		private notification: Notification,
 		private db: PrismaClient,
-		private queue: Queue,
+		private queue: SqsQueue,
 		private parentLogger: Logger,
 	) {}
 

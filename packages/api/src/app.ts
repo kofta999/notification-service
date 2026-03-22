@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { NotifyRequestSchema } from "./lib/schemas";
-import { Queue } from "shared/queue";
+import { SqsQueue } from "shared/queue";
 import Redis from "ioredis";
 import { metrics } from "shared/metrics";
 import { register } from "prom-client";
@@ -13,6 +13,7 @@ import { apiKeyAuth } from "./middleware/auth";
 import { apiRateLimit } from "./middleware/rate-limit";
 import { errorHandler } from "./middleware/error-handler";
 import { InvalidPayloadError } from "shared/errors";
+import { SQSClient } from "@aws-sdk/client-sqs"
 
 const logger = createLogger("app");
 
@@ -21,11 +22,7 @@ app.use(errorHandler);
 
 export const db = createPrisma();
 export const redis = new Redis(env.REDIS_URL);
-export const queue = new Queue({
-  queueName: "test",
-  redis,
-  timeoutSecs: 5
-});
+export const queue = new SqsQueue("https://sqs.us-east-1.amazonaws.com/903050880181/noti-service-sqs", new SQSClient({region: "us-east-1"}))
 
 app.get("/", (c) => {
   return c.text("Hello Hono!");

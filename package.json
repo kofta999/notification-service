@@ -10,6 +10,7 @@
     "stressTest": "bun --filter api stressTest"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "",
     "@types/bun": "latest",
     "@types/pg": "^8.16.0",
     "pino-pretty": "^13.1.1",
