@@ -5,7 +5,7 @@
     "dev": "bun --filter \"{api,worker}\" dev",
     "start": "bun --filter \"{api,worker}\" start",
     "build": "bun --filter \"*\" build",
-    "deploy": "bun --filter worker build && bun cdk deploy",
+    "deploy": "bun --filter worker build && bun --filter api build:lambda && bun cdk deploy",
     "typecheck": "bun run tsc",
     "stressTest": "bun --filter api stressTest"
   },

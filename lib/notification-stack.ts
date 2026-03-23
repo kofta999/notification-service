@@ -4,6 +4,9 @@ import { Construct } from "constructs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
+import * as integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 export class NotificationStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -43,7 +46,9 @@ export class NotificationStack extends Stack {
       tableName: "notification_api_keys",
       partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      maxReadRequestUnits: 5,
+      maxWriteRequestUnits: 5,
       pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
     });
 
@@ -63,7 +68,9 @@ export class NotificationStack extends Stack {
         tableName: "notification_rate_limits",
         partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
         sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
-        billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+        billingMode: dynamodb.BillingMode.PROVISIONED,
+        maxReadRequestUnits: 5,
+        maxWriteRequestUnits: 5,
         pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
         timeToLiveAttribute: "expiresAt",
       },
@@ -84,13 +91,103 @@ export class NotificationStack extends Stack {
       },
     });
 
-    // Grants
+    // API Lambda (Hono app packaged in packages/api/dist)
+    const apiLambda = new lambda.Function(this, "NotificationApiLambda", {
+      functionName: "notification_api",
+      runtime: lambda.Runtime.NODEJS_20_X,
+      code: lambda.Code.fromAsset(path.resolve("packages/api/dist")),
+      handler: "lambda.handler",
+      timeout: Duration.seconds(30),
+      memorySize: 512,
+      environment: {
+        API_APP_PORT: "3000",
+        DYNAMODB_NOTIFICATION_TABLE_NAME: notificationTable.tableName,
+        DYNAMODB_API_KEY_TABLE_NAME: apiKeyTable.tableName,
+        DYNAMODB_RATE_LIMIT_TABLE_NAME: rateLimitTable.tableName,
+        NOTIFICATION_QUEUE_URL: notificationQueue.queueUrl,
+      },
+    });
+
+    // SQS Queue -> Worker Lambda
+    const eventSource = new SqsEventSource(notificationQueue, {
+      reportBatchItemFailures: true,
+    });
+
+    workerLambda.addEventSource(eventSource);
+
+    // HTTP API Gateway -> API Lambda
+    const httpApi = new apigwv2.HttpApi(this, "NotificationHttpApi", {
+      apiName: "notification-http-api",
+      createDefaultStage: true,
+    });
+
+    const apiIntegration = new integrations.HttpLambdaIntegration(
+      "NotificationApiIntegration",
+      apiLambda,
+    );
+
+    httpApi.addRoutes({
+      path: "/{proxy+}",
+      methods: [apigwv2.HttpMethod.ANY],
+      integration: apiIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: "/",
+      methods: [apigwv2.HttpMethod.ANY],
+      integration: apiIntegration,
+    });
+
+    // Grants - worker
     notificationTable.grantReadWriteData(workerLambda);
     apiKeyTable.grantReadWriteData(workerLambda);
     rateLimitTable.grantReadWriteData(workerLambda);
-
     notificationQueue.grantConsumeMessages(workerLambda);
     notificationQueue.grantSendMessages(workerLambda);
+
+    // Grants - API
+    notificationTable.grantReadWriteData(apiLambda);
+    apiKeyTable.grantReadWriteData(apiLambda);
+    rateLimitTable.grantReadWriteData(apiLambda);
+    notificationQueue.grantSendMessages(apiLambda);
+
+    // CloudFormation Outputs - HTTP API
+    new CfnOutput(this, "HttpApiId", {
+      value: httpApi.httpApiId,
+      description: "HTTP API ID",
+      exportName: `${this.stackName}-HttpApiId`,
+    });
+
+    new CfnOutput(this, "HttpApiUrl", {
+      value: httpApi.apiEndpoint,
+      description: "HTTP API base URL",
+      exportName: `${this.stackName}-HttpApiUrl`,
+    });
+
+    // CloudFormation Outputs - Lambdas
+    new CfnOutput(this, "ApiLambdaName", {
+      value: apiLambda.functionName,
+      description: "API Lambda function name",
+      exportName: `${this.stackName}-ApiLambdaName`,
+    });
+
+    new CfnOutput(this, "ApiLambdaArn", {
+      value: apiLambda.functionArn,
+      description: "API Lambda function ARN",
+      exportName: `${this.stackName}-ApiLambdaArn`,
+    });
+
+    new CfnOutput(this, "WorkerLambdaName", {
+      value: workerLambda.functionName,
+      description: "Worker Lambda function name",
+      exportName: `${this.stackName}-WorkerLambdaName`,
+    });
+
+    new CfnOutput(this, "WorkerLambdaArn", {
+      value: workerLambda.functionArn,
+      description: "Worker Lambda function ARN",
+      exportName: `${this.stackName}-WorkerLambdaArn`,
+    });
 
     // CloudFormation Outputs - SQS
     new CfnOutput(this, "NotificationQueueUrl", {
