@@ -11,6 +11,7 @@ export class PushNotificationProvider implements IProvider {
     if (sleepDuration >= 5000) {
       throw new ThirdPartyProviderError(
         `Push provider timed out while sending notification ${notification.id}`,
+        { retryable: true }
       );
     }
   }

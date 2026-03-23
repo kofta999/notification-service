@@ -23,7 +23,7 @@ export class NotificationStack extends Stack {
       visibilityTimeout: Duration.seconds(30),
       deadLetterQueue: {
         queue: dlq,
-        maxReceiveCount: 5,
+        maxReceiveCount: parseInt(process.env.MAX_RETRIES ?? "5"),
       },
     });
 

@@ -11,6 +11,7 @@ export class EmailProvider implements IProvider {
     if (sleepDuration >= 5000) {
       throw new ThirdPartyProviderError(
         `Email provider timed out for notification ${notification.id}`,
+        { retryable: true }
       );
     }
   }

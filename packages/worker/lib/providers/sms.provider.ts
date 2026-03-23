@@ -11,6 +11,7 @@ export class SmsProvider implements IProvider {
     if (sleepDuration >= 5000) {
       throw new ThirdPartyProviderError(
         `SMS provider temporary failure for notification ${notification.id}`,
+        { retryable: true }
       );
     }
   }

@@ -139,9 +139,14 @@ sequenceDiagram
         W->>D: Update status=FAILED
     else Transient Failure
         P-->>W: 5xx / retryable error
-        W-->>Q: Throw / fail batch item
-        Q->>Q: Retry by visibility timeout policy
-        Q->>DLQ: Move after max receive count
+        W->>D: Increment retries
+        alt retries <= MAX_RETRIES
+            W-->>Q: Throw / fail batch item
+            Q->>Q: Retry by visibility timeout policy
+            Q->>DLQ: Move after max receive count
+        else retries > MAX_RETRIES
+            W->>D: Update status=FAILED
+        end
     end
 ```
 
@@ -205,7 +210,9 @@ curl -X POST http://localhost:3000/notify \
 
 - Primary queue: `notification_queue`
 - Dead-letter queue: `notification_queue_dlq`
-- Failed messages are retried by SQS policy, then routed to DLQ for inspection
+- Retryable failures increment `retries` and are rethrown so SQS retry policy can run
+- If `retries` exceeds `MAX_RETRIES`, worker marks notification as `FAILED`
+- Messages that keep failing at SQS level are routed to DLQ for inspection
 
 ### 4. Comprehensive Monitoring
 
@@ -474,6 +481,9 @@ NOTIFICATION_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/<account-id>/notifica
 DYNAMODB_NOTIFICATION_TABLE_NAME=notification_db
 DYNAMODB_API_KEY_TABLE_NAME=notification_api_keys
 DYNAMODB_RATE_LIMIT_TABLE_NAME=notification_rate_limits
+# Worker retry behavior
+MAX_RETRIES=5
+
 # Optional local emulator endpoint
 DYNAMODB_ENDPOINT=http://localhost:8000
 
@@ -592,6 +602,8 @@ docker-compose up -d
 - Verify worker subscription/trigger to `notification_queue`
 - Inspect DLQ for repeatedly failing messages
 - Confirm notification transitions from `QUEUED` to `SENDING`
+- Check `retries` growth and whether `MAX_RETRIES` is set too low/high for your providers
+- Inspect DLQ records after repeated retryable failures
 
 ### DynamoDB access errors
 

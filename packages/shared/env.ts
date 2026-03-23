@@ -26,6 +26,9 @@ const envSchema = z.object({
     .default("notification_rate_limits"),
   NOTIFICATION_QUEUE_URL: z.string().min(1),
 
+  // Worker retry / DLQ behavior
+  MAX_RETRIES: z.coerce.number().int().min(0).default(5),
+
   // Optional local/dev overrides
   DYNAMODB_ENDPOINT: z.string().optional(),
 
