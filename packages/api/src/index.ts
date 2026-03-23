@@ -1,5 +1,4 @@
-import app, { redis } from "./app";
-import "./jobs/reconciler";
+import app from "./app";
 import { env } from "shared/env";
 import { createLogger } from "shared/logger";
 
@@ -11,15 +10,13 @@ logger.info(`Server up and listening on port ${env.API_APP_PORT}`);
 async function gracefulShutdown() {
   await server.stop();
   await Bun.sleep(5000);
+
   if (server.pendingRequests > 0) {
     logger.warn(
       `${server.pendingRequests} pending requests remain after timeout, cancelling all requests`,
     );
     await server.stop(true);
   }
-
-  await prisma?.$disconnect();
-  await redis.quit();
 
   process.exit(0);
 }

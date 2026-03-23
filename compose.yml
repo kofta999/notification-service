@@ -4,8 +4,7 @@ services:
     command: "bun run migrate:deploy"
     build: .
     env_file:
-      - ./config/db.env.example
-      - ./config/api.env.example
+      - ./config/.env.example
     depends_on:
       db:
         condition: service_healthy
@@ -16,8 +15,7 @@ services:
     ports:
       - 3000:3000
     env_file:
-      - ./config/db.env.example
-      - ./config/api.env.example
+      - ./config/.env.example
     command: "bun --filter=api start"
     depends_on:
       redis:
@@ -31,8 +29,7 @@ services:
     ports:
       - 9001:9001
     env_file:
-      - ./config/db.env.example
-      - ./config/api.env.example
+      - ./config/.env.example
     command: "bun --filter=worker start"
     depends_on:
       redis:

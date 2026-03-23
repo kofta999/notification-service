@@ -5,19 +5,18 @@
   "private": true,
   "exports": {
     "./db": "./lib/db.ts",
+    "./dynamo": "./lib/dynamo.ts",
     "./logger": "./lib/logger.ts",
     "./metrics": "./lib/metrics.ts",
     "./queue": "./lib/queue/index.ts",
     "./rate-limiter": "./lib/rate-limiter.ts",
     "./env": "./env.ts",
-    "./prisma/client": "./generated/prisma/client.ts",
     "./errors": "./lib/errors.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.3.0",
-    "@prisma/client": "^7.3.0",
+    "@aws-sdk/client-dynamodb": "^3.888.0",
+    "@aws-sdk/lib-dynamodb": "^3.888.0",
     "dotenv": "^17.2.1",
-    "ioredis": "^5.7.0",
     "pino": "^9.9.1",
     "pino-loki": "^2.6.0",
     "prom-client": "^15.1.3",
@@ -28,6 +27,6 @@
     "pino-pretty": "^13.1.1"
   },
   "scripts": {
-    "build": "prisma generate --schema=\"../../prisma/schema.prisma\""
+    "build": "echo \"shared build: no codegen required\""
   }
 }

@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { ThirdPartyProviderError } from "shared/errors";
-import type { Notification } from "shared/prisma/client";
+import type { Notification } from "shared/db";
 import type { IProvider } from "./provider.interface";
 
 export class PushNotificationProvider implements IProvider {
@@ -9,9 +9,9 @@ export class PushNotificationProvider implements IProvider {
     await sleep(sleepDuration);
 
     if (sleepDuration >= 5000) {
-      throw new ThirdPartyProviderError("Failed to send notification", {
-        retryable: true,
-      });
+      throw new ThirdPartyProviderError(
+        `Push provider timed out while sending notification ${notification.id}`,
+      );
     }
   }
 }

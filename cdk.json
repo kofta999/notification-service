@@ -1,0 +1,19 @@
+{
+  "app": "bun run bin/notification-service.ts",
+  "watch": {
+    "include": ["lib/**/*.ts", "bin/**/*.ts"],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "package*.json",
+      "yarn.lock",
+      "bun.lock",
+      "node_modules",
+      "dist",
+      "cdk.out"
+    ]
+  },
+  "context": {
+    "@aws-cdk/core:newStyleStackSynthesis": true
+  }
+}

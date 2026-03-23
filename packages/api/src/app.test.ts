@@ -1,20 +1,15 @@
 import { describe, it, expect, beforeAll } from "bun:test";
 import app from "./app";
-import type { PrismaClient } from "shared/prisma/client";
-import { createPrisma } from "shared/db";
+import { apiKeyTable } from "shared/db";
 
 describe("API Endpoints", () => {
   let testApiKey: string;
-  let db: PrismaClient
 
   beforeAll(async () => {
-    db = createPrisma()
-    const key = await db.apiKey.create({
-      data: {
-        key: "test_key_12345",
-        name: "Test Key",
-        rateLimit: 100,
-      }
+    const key = await apiKeyTable.create({
+      key: "test_key_12345",
+      name: "Test Key",
+      rateLimit: 100,
     });
     testApiKey = key.key;
   });
@@ -26,11 +21,11 @@ describe("API Endpoints", () => {
         recipientId: "user123",
         channel: "email",
         channelAddress: "test@example.com",
-        payload: { message: "test" }
+        payload: { message: "test" },
       }),
       headers: {
         "Content-Type": "application/json",
-      }
+      },
     });
 
     expect(res.status).toBe(401);
@@ -46,12 +41,12 @@ describe("API Endpoints", () => {
         recipientId: "user123",
         channel: "email",
         channelAddress: "test@example.com",
-        payload: { message: "test" }
+        payload: { message: "test" },
       }),
       headers: {
         "Content-Type": "application/json",
         "x-api-key": testApiKey,
-      }
+      },
     });
 
     expect(res.status).toBe(200);
@@ -61,10 +56,10 @@ describe("API Endpoints", () => {
   });
 
   it("should return 404 for non-existent notification", async () => {
-    const res = await app.request("/status/99999", {
+    const res = await app.request("/status/non-existent-id", {
       headers: {
         "x-api-key": testApiKey,
-      }
+      },
     });
 
     expect(res.status).toBe(404);

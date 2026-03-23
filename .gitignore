@@ -1,7 +1,7 @@
 # deps
 node_modules/
 
-packages/shared/generated/prisma
-prisma/dev.db
+
 config/*.env
 dist
+cdk.out

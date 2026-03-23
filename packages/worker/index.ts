@@ -1,133 +1,62 @@
-import { SqsQueue } from "shared/queue";
-import { SQSClient } from "@aws-sdk/client-sqs"
+import type { SQSEvent, SQSHandler, SQSRecord } from "aws-lambda";
 import { NotificationHandler } from "./lib/notification-handler";
-import Redis from "ioredis";
-import { workerMetrics } from "./lib/metrics";
-import { register } from "prom-client";
-import { env } from "shared/env";
 import { createLogger } from "shared/logger";
-import { createPrisma } from "shared/db";
-import { RateLimiter } from "shared/rate-limiter";
-import { randomUUID } from "node:crypto";
-import { Hono } from "hono";
-import type { PrismaClient, Notification } from "shared/prisma/client";
-import type { Logger } from "pino";
-import type { IQueue } from "../shared/lib/queue/queue.interface";
+import { notificationTable } from "shared/db";
 
-class Worker {
-	private id: string;
-	private logger: Logger;
-	private db: PrismaClient;
-	private redis: Redis;
-	private queue: SqsQueue;
-	private rateLimiters: Record<Notification["channel"], RateLimiter>;
-	private app: Hono;
-	private CONCURRENCY: number
+// 1. Initialize heavy clients OUTSIDE the handler (Cold Start Optimization)
+// Lambda keeps these in memory between invocations.
+const logger = createLogger("worker-lambda");
 
-	constructor() {
-		this.id = process.env.WORKER_ID ?? randomUUID();
-		this.logger = createLogger(`worker-${this.id}`);
-		this.db = createPrisma();
-		this.redis = new Redis(env.REDIS_URL);
-		this.queue = new SqsQueue("https://sqs.us-east-1.amazonaws.com/903050880181/noti-service-sqs", new SQSClient({region: "us-east-1"}))
+// 2. The Lambda Entry Point
+export const handler: SQSHandler = async (event: SQSEvent) => {
+  logger.info({ recordCount: event.Records.length }, "Lambda invoked by SQS");
 
-		this.rateLimiters = {
-			email: new RateLimiter(this.redis, "rate:email", 100),
-			sms: new RateLimiter(this.redis, "rate:sms", 100),
-			push: new RateLimiter(this.redis, "rate:push", 100),
-		};
+  // AWS Pro-Tip: SQS Partial Batch Responses
+  // If 1 out of 10 messages fails, we only want to retry that 1.
+  const batchItemFailures: Array<{ itemIdentifier: string }> = [];
 
-		this.app = new Hono();
-    this.CONCURRENCY = env.WORKER_CONCURRENCY;
-	}
+  for (const record of event.Records) {
+    try {
+      await processRecord(record);
+    } catch (error) {
+      logger.error(
+        { error, messageId: record.messageId },
+        "Error processing record",
+      );
+      // Tell AWS this specific message failed so it retries ONLY this one
+      batchItemFailures.push({ itemIdentifier: record.messageId });
+    }
+  }
 
-	private setupMetricsServer() {
-		this.app.get("/metrics", async (c) => {
-			this.logger.info("Metrics endpoint accessed");
-			c.header("Content-Type", register.contentType);
-			const metrics = await register.metrics();
-			return c.text(metrics);
-		});
+  return { batchItemFailures };
+};
 
-		Bun.serve({
-			port: 9001,
-			fetch: this.app.fetch,
-		});
+// 3. The Business Logic
+async function processRecord(record: SQSRecord) {
+  const notificationId = record.body?.trim();
+  if (!notificationId) throw new Error(`Invalid body: ${record.body}`);
 
-		this.logger.info("Metrics server running on port 9001");
-	}
+  const maybeNotification = await notificationTable.findById(notificationId);
 
-	public async start() {
-		this.logger.info("Worker starting...");
-		this.setupMetricsServer();
-		await this.workerLoop();
-	}
+  if (!maybeNotification) {
+    logger.warn({ notificationId }, "Notification not found in DB, skipping");
+    return; // Returning normally tells AWS to delete the message
+  }
 
-	private async workerLoop() {
-		this.logger.info(`Worker started, concurrency count: ${this.CONCURRENCY}`);
-		const activeJobs = new Set<Promise<void>>();
+  const notification = await notificationTable.markSendingIfQueued(notificationId);
 
-		while (true) {
-			if (activeJobs.size >= this.CONCURRENCY) {
-				await Promise.race(activeJobs);
-			}
+  if (!notification) {
+    logger.info(
+      { notificationId },
+      "Notification is not QUEUED anymore, skipping",
+    );
+    return;
+  }
 
-			const dequeuedJob = await this.queue.dequeue();
-      if (!dequeuedJob) continue;
-      const {id: notificationId, receiptHandle} = dequeuedJob
-
-				workerMetrics.worker_jobs_picked_up_total.inc();
-				const childLogger = this.logger.child({ notificationId });
-				childLogger.info("Dequeued notification");
-
-      const job = this.processNotification(notificationId)
-          .then(async () => {
-            await this.queue.ack(receiptHandle);
-          })
-					.catch((error) => {
-						childLogger.error({ error }, "Error processing notification");
-					})
-					.finally(() => {
-						activeJobs.delete(job);
-					});
-
-				activeJobs.add(job);
-		}
-	}
-
-	private async processNotification(notificationId: number) {
-		const maybeNotification = await this.db.notification.findUnique({
-			where: { id: notificationId },
-			select: { channel: true },
-		});
-
-		if (!maybeNotification) {
-			this.logger.warn({ notificationId }, "Notification not found, skipping");
-			return;
-		}
-
-		const rateLimiter = this.rateLimiters[maybeNotification.channel];
-
-		if (await rateLimiter.take()) {
-			const notification = await this.db.notification.update({
-				where: { id: notificationId, status: "QUEUED" },
-				data: { status: "SENDING" },
-			});
-
-			const handler = new NotificationHandler(
-				notification,
-				this.db,
-				this.queue,
-				this.logger,
-			);
-			await handler.handle();
-		} else {
-			throw new Error(
-				"Rate limit exceeded",
-			);
-		}
-	}
+  const notificationHandler = new NotificationHandler(
+    notification,
+    notificationTable,
+    logger,
+  );
+  await notificationHandler.handle();
 }
-
-const worker = new Worker();
-await worker.start();

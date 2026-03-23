@@ -1,8 +1,8 @@
 import { RateLimiter } from "shared/rate-limiter";
 import type { Context, Next } from "hono";
-import { redis } from "../app";
+import { env } from "shared/env";
 
-const limiters = new Map<number, RateLimiter>();
+const limiters = new Map<string, RateLimiter>();
 
 export async function apiRateLimit(c: Context, next: Next) {
   const apiKey = c.get("apiKey");
@@ -11,25 +11,29 @@ export async function apiRateLimit(c: Context, next: Next) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  let limiter = limiters.get(apiKey.id);
+  const limiterKey = String(apiKey.id);
+
+  let limiter = limiters.get(limiterKey);
   if (!limiter) {
     limiter = new RateLimiter(
-      redis,
-      `api_rate_limit:${apiKey.id}`,
+      `api_rate_limit:${limiterKey}`,
       apiKey.rateLimit,
-      60 // 60 seconds window
+      60,
     );
-    limiters.set(apiKey.id, limiter);
+    limiters.set(limiterKey, limiter);
   }
 
   const allowed = await limiter.take();
 
   if (!allowed) {
-    return c.json({
-      error: "Rate limit exceeded",
-      limit: apiKey.rateLimit,
-      window: "60s"
-    }, 429);
+    return c.json(
+      {
+        error: "Rate limit exceeded",
+        limit: apiKey.rateLimit,
+        window: "60s",
+      },
+      429,
+    );
   }
 
   await next();

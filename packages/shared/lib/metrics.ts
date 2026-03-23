@@ -7,11 +7,11 @@ import { Counter, Registry, Gauge, register } from "prom-client";
 // API (Enqueuer) metrics
 const api_jobs_enqueued_total = new Counter({
   name: "api_jobs_enqueued_total",
-  help: "Total jobs enqueued into Redis by the API",
+  help: "Total jobs enqueued by the API",
 });
 const api_jobs_enqueue_failed_total = new Counter({
   name: "api_jobs_enqueue_failed_total",
-  help: "Total jobs that failed to enqueue into Redis by the API",
+  help: "Total jobs that failed to enqueue by the API",
 });
 
 // Reaper metrics
@@ -35,7 +35,7 @@ const reconciler_runs_total = new Counter({
 });
 const reconciler_jobs_detected_total = new Counter({
   name: "reconciler_jobs_detected_total",
-  help: "Jobs found QUEUED in DB but missing in Redis",
+  help: "Jobs found QUEUED in DB but missing from the queue",
 });
 const reconciler_jobs_requeued_total = new Counter({
   name: "reconciler_jobs_requeued_total",
@@ -46,7 +46,7 @@ const reconciler_jobs_requeued_total = new Counter({
 // Needs a custom job (won't do it for now)
 // const queue_depth = new Gauge({
 //   name: "queue_depth",
-//   help: "Current Redis queue length",
+//   help: "Current queue length",
 // });
 const db_queued_notifications = new Gauge({
   name: "db_queued_notifications",

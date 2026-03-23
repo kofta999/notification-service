@@ -1,108 +1,113 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { NotifyRequestSchema } from "./lib/schemas";
-import { SqsQueue } from "shared/queue";
-import Redis from "ioredis";
-import { metrics } from "shared/metrics";
 import { register } from "prom-client";
-import { env } from "shared/env";
-import { createLogger } from "shared/logger";
-import { createPrisma } from "shared/db";
-import type { Prisma } from "shared/prisma/client";
+import { SQSClient } from "@aws-sdk/client-sqs";
+
+import { NotifyRequestSchema } from "./lib/schemas";
 import { apiKeyAuth } from "./middleware/auth";
 import { apiRateLimit } from "./middleware/rate-limit";
 import { errorHandler } from "./middleware/error-handler";
+
+import { env } from "shared/env";
+import { createLogger } from "shared/logger";
+import { metrics } from "shared/metrics";
+import { SqsQueue } from "shared/queue";
 import { InvalidPayloadError } from "shared/errors";
-import { SQSClient } from "@aws-sdk/client-sqs"
+import { notificationTable } from "shared/db";
 
 const logger = createLogger("app");
-
 const app = new Hono();
+
 app.use(errorHandler);
 
-export const db = createPrisma();
-export const redis = new Redis(env.REDIS_URL);
-export const queue = new SqsQueue("https://sqs.us-east-1.amazonaws.com/903050880181/noti-service-sqs", new SQSClient({region: "us-east-1"}))
+export const queue = new SqsQueue(
+  env.NOTIFICATION_QUEUE_URL,
+  new SQSClient({ region: env.AWS_REGION }),
+);
 
-app.get("/", (c) => {
-  return c.text("Hello Hono!");
-});
+app.get("/", (c) => c.text("Hello Hono!"));
 
-app.post("/notify", apiKeyAuth, apiRateLimit, zValidator("json", NotifyRequestSchema), async (c) => {
-  // Validate
-  const body = c.req.valid("json");
-  logger.info({ body }, "Received new notification request");
+app.post(
+  "/notify",
+  apiKeyAuth,
+  apiRateLimit,
+  zValidator("json", NotifyRequestSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    logger.info({ body }, "Received new notification request");
 
-  try {
-    // Insert into db
-    const { id } = await db.notification.create({
-      data: {
+    try {
+      const notification = await notificationTable.create({
+        recipientId: body.recipientId,
         channel: body.channel,
         channelAddress: body.channelAddress,
-        payload: body.payload as Prisma.JsonObject,
-        recipientId: body.recipientId,
-      },
-      select: { id: true },
-    });
-    logger.info(
-      { notificationId: id, channel: body.channel },
-      "Notification created in DB",
-    );
+        payload: body.payload,
+      });
 
-    // Enqueue to dispatcher
-    await queue.enqueue(id);
-    logger.info({ notificationId: id }, "Notification enqueued for processing");
+      await queue.enqueue(notification.id);
 
-    metrics.api_jobs_enqueued_total.inc();
+      logger.info(
+        { notificationId: notification.id, channel: notification.channel },
+        "Notification created and enqueued",
+      );
 
-    return c.json({ id });
-  } catch (error) {
-    logger.error({ error }, "Failed to process and enqueue notification");
-    metrics.api_jobs_enqueue_failed_total.inc();
-    throw new InvalidPayloadError("Failed to process and enqueue notification", { cause: error as Error });
-  }
-});
+      metrics.api_jobs_enqueued_total.inc();
+
+      return c.json({ id: notification.id }, 200);
+    } catch (error) {
+      logger.error({ error }, "Failed to process and enqueue notification");
+      metrics.api_jobs_enqueue_failed_total.inc();
+      throw new InvalidPayloadError("Failed to process and enqueue notification", {
+        cause: error as Error,
+      });
+    }
+  },
+);
 
 app.get("/status/:id", apiKeyAuth, async (c) => {
-  const id = parseInt(c.req.param("id"), 10);
+  const id = c.req.param("id");
   logger.info({ notificationId: id }, "Fetching notification status");
 
-  const notification = await db.notification.findFirst({
-    where: { id },
-    select: {
-      id: true,
-      updatedAt: true,
-      status: true,
-    },
-  });
+  const notification = await notificationTable.findById(id);
 
   if (!notification) {
     logger.warn({ notificationId: id }, "Notification not found");
     return c.json({ message: `Notification with id ${id} is not found` }, 404);
   }
 
-  logger.info(
-    { notificationId: id, status: notification.status },
-    "Notification status found",
+  return c.json(
+    {
+      id: notification.id,
+      status: notification.status,
+      updatedAt: notification.updatedAt,
+    },
+    200,
   );
-  return c.json(notification);
 });
 
 app.get("/metrics", async (c) => {
-  logger.info("Metrics endpoint accessed");
   c.header("Content-Type", register.contentType);
-  const metrics = await register.metrics();
-  return c.text(metrics);
+  return c.text(await register.metrics());
 });
 
 app.get("/health", async (c) => {
   try {
-    await Promise.all([db.$queryRaw`SELECT 1`, redis.ping()]);
-
+    await dbHealthcheck();
     return c.json({ status: "healthy" }, 200);
   } catch (error) {
-    return c.json({ status: "unhealthy", error }, 503);
+    logger.error({ error }, "Healthcheck failed");
+    return c.json({ status: "unhealthy" }, 503);
   }
 });
+
+async function dbHealthcheck() {
+  if (typeof (notificationTable as any).healthcheck === "function") {
+    await (notificationTable as any).healthcheck();
+    return;
+  }
+
+  // Fallback lightweight operation if dedicated health method isn't exposed.
+  await notificationTable.find({ limit: 1 });
+}
 
 export default app;

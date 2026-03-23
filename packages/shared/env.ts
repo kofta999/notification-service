@@ -1,26 +1,36 @@
 import { z } from "zod";
 import * as dotenv from "dotenv";
-dotenv.config({ quiet: true, path: ["./config/api.env", "./config/db.env"] });
+
+dotenv.config({ quiet: true, path: "./config/.env" });
 
 const envSchema = z.object({
-  // API Config
+  // API
   API_APP_PORT: z.coerce.number().positive().default(3000),
-  REAPING_INTERVAL_MINS: z.coerce.number().positive(),
-  RECONCILIATION_INTERVAL_MINS: z.coerce.number().positive(),
-  // Shared Config
-  POSTGRES_USER: z.string(),
-  POSTGRES_PASSWORD: z.string(),
-  POSTGRES_DB: z.string(),
-  POSTGRES_HOST: z.string(),
-  REDIS_URL: z.string(),
-  LOKI_URL: z.string(),
-  QUEUE_PREFIX: z.string(),
-  // Worker Config
-  WORKER_NOTI_MAX_RETRIES: z.coerce.number().positive(),
-  WORKER_CONCURRENCY: z.coerce.number().positive(),
-  WORKER_BACKOFF_EXPONENTIAL_FACTOR: z.coerce.number().positive(),
-  WORKER_BACKOFF_BASE_DELAY_MS: z.coerce.number().positive(),
-  WORKER_RATE_LIMIT_REQUEUE_DELAY_MS: z.coerce.number().positive(),
+
+  // App queue key namespace
+  QUEUE_PREFIX: z.string().min(1).default("notification"),
+
+  // AWS / DynamoDB
+  AWS_REGION: z.string().default("us-east-1"),
+  DYNAMODB_NOTIFICATION_TABLE_NAME: z
+    .string()
+    .min(1)
+    .default("notification_db"),
+  DYNAMODB_API_KEY_TABLE_NAME: z
+    .string()
+    .min(1)
+    .default("notification_api_keys"),
+  DYNAMODB_RATE_LIMIT_TABLE_NAME: z
+    .string()
+    .min(1)
+    .default("notification_rate_limits"),
+  NOTIFICATION_QUEUE_URL: z.string().min(1),
+
+  // Optional local/dev overrides
+  DYNAMODB_ENDPOINT: z.string().optional(),
+
+  // Logging
+  LOKI_URL: z.string().optional(),
 });
 
 const parsedConfig = envSchema.safeParse(process.env);

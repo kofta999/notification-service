@@ -3,7 +3,7 @@ import { Counter } from "prom-client";
 // Worker / Dispatcher metrics
 const worker_jobs_picked_up_total = new Counter({
   name: "worker_jobs_picked_up_total",
-  help: "Jobs dequeued from Redis by workers",
+  help: "Jobs picked up by workers from the queue",
 });
 const worker_jobs_sent_total = new Counter({
   name: "worker_jobs_sent_total",

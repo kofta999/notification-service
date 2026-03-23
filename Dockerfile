@@ -26,9 +26,6 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/packages/api/package.json ./packages/api/
 COPY --from=builder /app/packages/worker/package.json ./packages/worker/
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
-# For prisma migrations
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 USER appuser
 CMD [ "bun", "run" ,"start" ]
