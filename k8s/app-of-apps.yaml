@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/kofta999/notification-service.git'
-    targetRevision: main
+    targetRevision: master
     path: k8s/apps  
     directory:
       recurse: true
