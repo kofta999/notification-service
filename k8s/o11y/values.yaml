@@ -60,6 +60,8 @@ loki:
   deploymentMode: Monolithic
   singleBinary:
     replicas: 1
+    persistence:
+      storageClass: local-path
   backend:
     replicas: 0
   read:
