@@ -7,9 +7,9 @@ data:
   API_APP_PORT: "3000"
   REAPING_INTERVAL_MINS: "1"
   RECONCILIATION_INTERVAL_MINS: "1"
-  REDIS_URL: "redis:6379"
+  REDIS_URL: "redis://redis-service:6379"
   LOKI_URL: "http://loki:3100"
-  QUEUE_PREFIX: redis_mq
+  QUEUE_PREFIX: "redis_mq"
   WORKER_NOTI_MAX_RETRIES: "3"
   WORKER_CONCURRENCY: "100"
   WORKER_BACKOFF_EXPONENTIAL_FACTOR: "2"
@@ -24,4 +24,4 @@ data:
   POSTGRES_USER: notification_user
   POSTGRES_PASSWORD: notification_password
   POSTGRES_DB: notification_db
-  POSTGRES_HOST: "db"
+  POSTGRES_HOST: "db-service"
