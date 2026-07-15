@@ -1,11 +1,11 @@
-# apiVersion: v1
-# kind: PersistentVolumeClaim
-# metadata:
-#   name: pg-data-pvc
-# spec:
-#   storageClassName: local-path
-#   accessModes: [ReadWriteOnce]
-#   resources: { requests: { storage: 5Gi } }
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pg-data-pvc
+spec:
+  storageClassName: local-path
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 5Gi } }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,9 +29,9 @@ spec:
                 name: db-config
           ports:
             - containerPort: 5432
-          # volumeMounts:
-          #   - name: pg-data
-          #     mountPath: /var/lib/postgresql/data
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
           healthCheck:
             exec:
               command:
@@ -42,10 +42,10 @@ spec:
                   "-d",
                   "notification_db",
                 ]
-      # volumes:
-      #   - name: pg-data
-      #     persistentVolumeClaim:
-      #       claimName: pg-data-pvc
+      volumes:
+        - name: pg-data
+          persistentVolumeClaim:
+            claimName: pg-data-pvc
 ---
 apiVersion: v1
 kind: Service
