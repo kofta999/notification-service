@@ -1,11 +1,11 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redis-data-pvc
-spec:
-  storageClassName: local-path
-  accessModes: [ReadWriteOnce]
-  resources: { requests: { storage: 1Gi } }
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: redis-data-pvc
+# spec:
+#   storageClassName: local-path
+#   accessModes: [ReadWriteOnce]
+#   resources: { requests: { storage: 1Gi } }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,13 +26,13 @@ spec:
           image: redis:8.0
           ports:
             - containerPort: 6379
-          volumeMounts:
-            - name: redis-data
-              mountPath: /data
-      volumes:
-        - name: redis-data
-          persistentVolumeClaim:
-            claimName: redis-data-pvc
+      #     volumeMounts:
+      #       - name: redis-data
+      #         mountPath: /data
+      # volumes:
+      #   - name: redis-data
+      #     persistentVolumeClaim:
+      #       claimName: redis-data-pvc
 ---
 apiVersion: v1
 kind: Service
