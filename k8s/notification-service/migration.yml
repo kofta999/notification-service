@@ -12,7 +12,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrations
-          image: notification-service:latest
+          image: kofta/notification-service:latest
           command: ["bun", "run", "migrate:deploy"]
           envFrom:
             - configMapRef:
