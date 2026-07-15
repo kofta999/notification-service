@@ -38,3 +38,11 @@ alloy:
   service:
     annotations:
       argocd.argoproj.io/sync-wave: "0"
+
+loki:
+  enabled: true
+  storage:
+    type: "filesystem"
+    bucketNames:
+      chunks: "chunks"
+      ruler: "ruler"
