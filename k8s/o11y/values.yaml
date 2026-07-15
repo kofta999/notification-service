@@ -29,15 +29,15 @@ alloy:
         }
   controller:
     extraAnnotations:
-      argocd.argoproj.io/sync-wave: "0"
+      argocd.argoproj.io/sync-wave: "-1"
 
   serviceAccount:
     annotations:
-      argocd.argoproj.io/sync-wave: "0"
+      argocd.argoproj.io/sync-wave: "-1"
 
   service:
     annotations:
-      argocd.argoproj.io/sync-wave: "0"
+      argocd.argoproj.io/sync-wave: "-1"
 
 loki:
   enabled: true
