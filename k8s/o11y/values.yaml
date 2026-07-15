@@ -184,12 +184,15 @@ tempo:
 
 grafana:
   enabled: true
+  fullnameOverride: "observability-stack-app-grafana"
+  
   service:
     enabled: true
     type: NodePort
     port: 80
     targetPort: 3000
     nodePort: 30080
+    
   persistence:
     enabled: true
     storageClassName: "local-path"
