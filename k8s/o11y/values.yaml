@@ -1,9 +1,5 @@
 alloy:
   enabled: true
-  # option to make Alloy able to read logs from /var/log/containers and /var/log/pods
-  # mounts:
-  #   varlog: true
-
   alloy:
     extraPorts:
       - name: loki-api
@@ -27,6 +23,7 @@ alloy:
             url = "http://loki.kofta.svc.cluster.local:3100/loki/api/v1/push"
           }
         }
+
   controller:
     extraAnnotations:
       argocd.argoproj.io/sync-wave: "-1"
@@ -41,8 +38,42 @@ alloy:
 
 loki:
   enabled: true
-  storage:
-    type: "filesystem"
-    bucketNames:
-      chunks: "chunks"
-      ruler: "ruler"
+  deploymentMode: Monolithic
+  singleBinary:
+    replicas: 1
+  backend:
+    replicas: 0
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  ingester:
+    replicas: 0
+  querier:
+    replicas: 0
+  queryFrontend:
+    replicas: 0
+  queryScheduler:
+    replicas: 0
+  distributor:
+    replicas: 0
+  compactor:
+    replicas: 0
+  indexGateway:
+    replicas: 0
+  bloomPlanner:
+    replicas: 0
+  bloomBuilder:
+    replicas: 0
+  bloomGateway:
+    replicas: 0
+
+  loki:
+    useTestSchema: true
+    storage:
+      type: "filesystem"
+      bucketNames:
+        chunks: "chunks"
+        ruler: "ruler"
+prometheus:
+  enabled: true
