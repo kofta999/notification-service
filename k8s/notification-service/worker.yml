@@ -23,7 +23,7 @@ spec:
       #       ]
       containers:
         - name: worker
-          image: notification-service:latest
+          image: kofta/notification-service:latest
           command: ["bun"]
           args: ["--filter=worker", "start"]
           ports:
