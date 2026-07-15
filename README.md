@@ -198,12 +198,17 @@ graph LR
 - **Prometheus** - Metrics collection and storage
 - **Grafana** - Visualization and dashboards
 - **Loki** - Log aggregation and querying
+- **Tempo** - Distributed tracing backend
+- **OpenTelemetry (OTel)** - Native tracing and auto-instrumentation SDK
+- **Grafana Alloy** - Central OTel collector, log forwarder, and metric scraper
 - **Pino** - High-performance structured logging
 
 ### Infrastructure
 
-- **Docker & Docker Compose** - Containerization and orchestration
-- **GitHub Actions** - CI/CD pipelines (planned)
+- **Docker & Docker Compose** - Containerization and local orchestration
+- **Kubernetes** - Container orchestration platform
+- **ArgoCD** - GitOps continuous delivery tool (using the App-of-Apps pattern)
+- **GitHub Actions** - CI/CD pipeline (docker build and push)
 
 ---
 
@@ -646,6 +651,7 @@ notification-service/
 │       │   ├── db.ts          # Prisma client factory
 │       │   ├── logger.ts      # Pino logger setup
 │       │   ├── metrics.ts     # Prometheus metrics
+│       │   ├── otel.ts        # OpenTelemetry SDK initialization
 │       │   ├── queue.ts       # Redis queue wrapper
 │       │   └── rate-limiter.ts # Rate limiting logic
 │       ├── env.ts             # Environment validation
@@ -666,6 +672,22 @@ notification-service/
 │   ├── api.env.example        # API environment variables
 │   ├── db.env.example         # Database credentials
 │   └── grafana.env.example    # Grafana admin credentials
+│
+├── k8s/                        # Kubernetes and GitOps manifests
+│   ├── app-of-apps.yaml        # ArgoCD Master Application manifest
+│   ├── apps/                   # ArgoCD Child Application manifests
+│   │   ├── notification-service-app.yaml
+│   │   └── o11y-app.yaml
+│   ├── notification-service/   # App services and database deployments
+│   │   ├── api.yml
+│   │   ├── config.yml
+│   │   ├── migration.yml
+│   │   ├── postgres.yml
+│   │   ├── redis.yml
+│   │   └── worker.yml
+│   └── o11y/                   # Helm platform-observability stack values & definition
+│       ├── Chart.yaml
+│       └── values.yaml
 │
 ├── scripts/
 │   └── manage-api-keys.ts     # API key management CLI
@@ -701,6 +723,7 @@ REDIS_URL=localhost:6379              # Redis connection string
 
 # Observability
 LOKI_URL=http://localhost:3100        # Loki endpoint for logs
+TEMPO_URL=http://localhost:4318/v1/traces  # Tempo OTel HTTP receiver endpoint
 
 # Queue
 QUEUE_PREFIX=redis_mq                 # Redis key prefix
@@ -786,7 +809,7 @@ docker build -t notification-service:latest .
 
 ## Deployment
 
-### Docker Compose (Recommended for Initial Production)
+### Docker Compose (Recommended for Local/Development Production)
 
 1. **Build the image:**
 
@@ -805,6 +828,26 @@ docker build -t notification-service:latest .
    ```bash
    docker-compose run --rm migrations
    ```
+
+### Kubernetes & GitOps (ArgoCD)
+
+The application is structured for automated continuous delivery using ArgoCD in a Kubernetes cluster.
+
+1. **Prerequisites**:
+   * Kubernetes cluster (e.g., k3s, Minikube, EKS, etc.).
+   * ArgoCD deployed in the cluster (under the `argocd` namespace).
+   * A dynamic local storage provisioner (providing the `local-path` StorageClass).
+
+2. **Deploy via App-of-Apps**:
+   Run the following command to apply the master bootstrap Application manifest [k8s/app-of-apps.yaml](file:///home/kofta/shit/notification-service/k8s/app-of-apps.yaml):
+   ```bash
+   kubectl apply -f k8s/app-of-apps.yaml
+   ```
+
+3. **Application Sync Waves**:
+   ArgoCD applies resources sequentially:
+   * **Wave 1 (`notification-service-app`)**: Deploys databases (Postgres, Redis), the migrations job, and API/Worker services under the `kofta` namespace from [k8s/apps/notification-service-app.yaml](file:///home/kofta/shit/notification-service/k8s/apps/notification-service-app.yaml).
+   * **Wave 2 (`observability-stack-app`)**: Installs the custom Helm-based platform-observability stack (Grafana Alloy, Loki, Prometheus, Tempo) under the `kofta` namespace from [k8s/apps/o11y-app.yaml](file:///home/kofta/shit/notification-service/k8s/apps/o11y-app.yaml).
 
 ### Production Checklist
 
