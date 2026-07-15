@@ -1,0 +1,10 @@
+apiVersion: v2
+name: platform-observability-stack
+description: End-to-end observability (LGTM + Alloy + MinIO)
+version: 1.0.0
+dependencies:
+  - name: alloy
+    version: 1.10.1
+    repository: https://grafana.github.io/helm-charts
+    condition: alloy.enabled
+ 
