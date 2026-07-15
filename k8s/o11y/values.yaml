@@ -50,7 +50,7 @@ alloy:
             url = "http://observability-stack-app-prometheus-server.kofta.svc.cluster.local:80/api/v1/write"
           }
         }
-        
+
         otelcol.receiver.otlp "default" {
           grpc {
             endpoint = "0.0.0.0:4317"
@@ -67,7 +67,7 @@ alloy:
           client {
             endpoint = "observability-stack-app-tempo.kofta.svc.cluster.local:4317"
             tls {
-              insecure = true 
+              insecure = true
             }
           }
         }
