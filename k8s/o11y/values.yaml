@@ -23,11 +23,11 @@ alloy:
             url = "http://observability-stack-app-loki-gateway.kofta.svc.cluster.local/loki/api/v1/push"
           }
         }
-        
+
         discovery.kubernetes "namespace_pods" {
           role = "pod"
           namespaces {
-            names = ["kofta"] 
+            names = ["kofta"]
           }
         }
 
@@ -93,7 +93,7 @@ loki:
     persistence:
       enabled: true
       storageClass: "local-path"
-      size: 10Gi 
+      size: 10Gi
 
   backend:
     replicas: 0
@@ -124,3 +124,6 @@ loki:
 
 prometheus:
   enabled: true
+  persistentVolume:
+    storageClass: "local-path"
+    size: 3Gi
