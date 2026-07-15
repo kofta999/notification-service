@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: o11y-app
+  name: observability-stack-app
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "2" 
@@ -15,10 +15,11 @@ spec:
     path: k8s/o11y
   destination:
     server: 'https://kubernetes.default.svc'
-    namespace: kofta
+    namespace: kofta 
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
