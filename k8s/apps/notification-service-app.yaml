@@ -11,7 +11,7 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/kofta999/notification-service.git'
-    targetRevision: main
+    targetRevision: master
     path: k8s/notification-service
   destination:
     server: 'https://kubernetes.default.svc'
