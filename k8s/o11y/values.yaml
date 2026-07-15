@@ -57,11 +57,34 @@ alloy:
 
 loki:
   enabled: true
-  deploymentMode: Monolithic
+  deploymentMode: SingleBinary
+
+  minio:
+    enabled: false
+
+  loki:
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 1
+    storage:
+      type: "filesystem"
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
   singleBinary:
     replicas: 1
     persistence:
-      storageClass: local-path
+      enabled: true
+      storageClass: "local-path"
+      size: 10Gi 
+
   backend:
     replicas: 0
   read:
@@ -89,12 +112,5 @@ loki:
   bloomGateway:
     replicas: 0
 
-  loki:
-    useTestSchema: true
-    storage:
-      type: "filesystem"
-      bucketNames:
-        chunks: "chunks"
-        ruler: "ruler"
 prometheus:
   enabled: true
