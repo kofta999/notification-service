@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: redis-data-pvc
 spec:
+  storageClassName: local-path
   accessModes: [ReadWriteOnce]
   resources: { requests: { storage: 1Gi } }
 ---

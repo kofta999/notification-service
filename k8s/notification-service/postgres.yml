@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: pg-data-pvc
 spec:
+  storageClassName: local-path
   accessModes: [ReadWriteOnce]
   resources: { requests: { storage: 5Gi } }
 ---
