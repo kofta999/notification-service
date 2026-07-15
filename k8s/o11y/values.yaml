@@ -20,7 +20,26 @@ alloy:
 
         loki.write "real_loki" {
           endpoint {
-            url = "http://loki.kofta.svc.cluster.local:3100/loki/api/v1/push"
+            url = "http://observability-stack-app-loki-gateway.kofta.svc.cluster.local/loki/api/v1/push"
+          }
+        }
+        
+        discovery.kubernetes "namespace_pods" {
+          role = "pod"
+          namespaces {
+            names = ["kofta"] 
+          }
+        }
+
+        prometheus.scrape "app_metrics_scraper" {
+          targets    = discovery.kubernetes.namespace_pods.targets
+          forward_to = [prometheus.remote_write.prom_storage.receiver]
+          scrape_interval = "15s"
+        }
+
+        prometheus.remote_write "prom_storage" {
+          endpoint {
+            url = "http://prometheus-operated.kofta.svc.cluster.local:9090/api/v1/write"
           }
         }
 
