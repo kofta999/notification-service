@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrations-job
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        job: migrations
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrations
+          image: notification-service:latest
+          command: ["bun", "run", "migrate:deploy"]
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - configMapRef:
+                name: db-config
