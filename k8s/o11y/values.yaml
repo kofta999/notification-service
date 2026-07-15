@@ -1,31 +1,32 @@
 alloy:
+  enabled: true
   # option to make Alloy able to read logs from /var/log/containers and /var/log/pods
   # mounts:
   #   varlog: true
-  enabled: true
-  extraPorts:
-    - name: loki-api
-      port: 9999
-      targetPort: 9999
-      protocol: TCP
 
-  configMap:
-    create: true
-    content: |-
-      loki.source.api "app_logs_receiver" {
-        http {
-          listen_address = "0.0.0.0"
-          listen_port = 9999
+  alloy:
+    extraPorts:
+      - name: loki-api
+        port: 9999
+        targetPort: 9999
+        protocol: TCP
+
+    configMap:
+      create: true
+      content: |-
+        loki.source.api "app_logs_receiver" {
+          http {
+            listen_address = "0.0.0.0"
+            listen_port = 9999
+          }
+          forward_to = [loki.write.real_loki.receiver]
         }
-        forward_to = [loki.write.real_loki.receiver]
-      }
 
-      loki.write "real_loki" {
-        endpoint {
-          url = "http://loki.kofta.svc.cluster.local:3100/loki/api/v1/push"
+        loki.write "real_loki" {
+          endpoint {
+            url = "http://loki.kofta.svc.cluster.local:3100/loki/api/v1/push"
+          }
         }
-      }
-
   controller:
     extraAnnotations:
       argocd.argoproj.io/sync-wave: "0"
