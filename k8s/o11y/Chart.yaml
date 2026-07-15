@@ -19,3 +19,7 @@ dependencies:
     version: 2.2.3
     repository: https://grafana-community.github.io/helm-charts
     # condition: prometheus.enabled
+  - name: grafana
+    version: 10.5.15
+    repository: https://grafana.github.io/helm-charts
+    # condition: grafana.enabled

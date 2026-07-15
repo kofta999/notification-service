@@ -181,3 +181,37 @@ tempo:
     accessModes:
       - ReadWriteOnce
     size: 3Gi
+
+grafana:
+  enabled: true
+  service:
+    enabled: true
+    type: NodePort
+    port: 80
+    targetPort: 3000
+    nodePort: 30080
+  persistence:
+    enabled: true
+    storageClassName: "local-path"
+    size: 5Gi
+
+  adminUser: "admin"
+  adminPassword: "123"
+
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://observability-stack-app-prometheus-server.kofta.svc.cluster.local:80
+          access: proxy
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://observability-stack-app-loki-gateway.kofta.svc.cluster.local
+          access: proxy
+        - name: Tempo
+          type: tempo
+          url: http://observability-stack-app-tempo.kofta.svc.cluster.local:3200
+          access: proxy
