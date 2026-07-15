@@ -93,7 +93,7 @@ loki:
     persistence:
       enabled: true
       storageClass: "local-path"
-      size: 10Gi
+      size: 10Gi 
 
   backend:
     replicas: 0
