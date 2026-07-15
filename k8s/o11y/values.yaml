@@ -49,11 +49,21 @@ alloy:
           }
 
           output {
-            // If you are using Tempo for traces:
-            // traces = [otelcol.exporter.otlp.tempo.input]
+            // Forward the received traces directly to our Tempo exporter below
+            traces = [otelcol.exporter.otlp.tempo.input]
+          }
+        }
 
-            // If you want to convert app metrics to Prometheus:
-            // metrics = [otelcol.exporter.prometheus.app_to_prom.input]
+        otelcol.exporter.otlp "tempo" {
+          client {
+            // This points to the standard OTLP gRPC port (4317) of your Tempo service
+            endpoint = "observability-stack-app-tempo.kofta.svc.cluster.local:4317"
+
+            // Crucial: Since you are running inside the cluster over plain HTTP/gRPC,
+            // you must explicitly disable TLS verification.
+            tls {
+              insecure = true
+            }
           }
         }
 
