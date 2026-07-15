@@ -2,7 +2,7 @@ alloy:
   # option to make Alloy able to read logs from /var/log/containers and /var/log/pods
   # mounts:
   #   varlog: true
-
+  enabled: true
   extraPorts:
     - name: loki-api
       port: 9999
