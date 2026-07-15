@@ -150,3 +150,19 @@ prometheus:
     persistentVolume:
       storageClass: "local-path"
       size: 3Gi
+
+tempo:
+  tempo:
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+  persistence:
+    enabled: true
+    storageClassName: "local-path"
+    accessModes:
+      - ReadWriteOnce
+    size: 3Gi
