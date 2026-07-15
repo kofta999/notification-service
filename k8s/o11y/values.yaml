@@ -62,6 +62,16 @@ loki:
   minio:
     enabled: false
 
+  chunkCache:
+    enabled: false
+  resultsCache:
+    enabled: false
+  memcached:
+    chunk_cache:
+      enabled: false
+    results_cache:
+      enabled: false
+
   loki:
     auth_enabled: false
     commonConfig:
