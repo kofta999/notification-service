@@ -9,6 +9,7 @@ data:
   RECONCILIATION_INTERVAL_MINS: "1"
   REDIS_URL: "redis://redis-service:6379"
   LOKI_URL: "http://observability-stack-app-alloy:9999"
+  TEMPO_URL: "http://observability-stack-app-alloy:4318/v1/traces"
   QUEUE_PREFIX: "redis_mq"
   WORKER_NOTI_MAX_RETRIES: "3"
   WORKER_CONCURRENCY: "100"

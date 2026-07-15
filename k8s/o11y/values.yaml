@@ -43,6 +43,20 @@ alloy:
           }
         }
 
+        otelcol.receiver.otlp "default" {
+          http {
+            endpoint = "0.0.0.0:4318"
+          }
+
+          output {
+            // If you are using Tempo for traces:
+            // traces = [otelcol.exporter.otlp.tempo.input]
+
+            // If you want to convert app metrics to Prometheus:
+            // metrics = [otelcol.exporter.prometheus.app_to_prom.input]
+          }
+        }
+
   # controller:
   #   extraAnnotations:
   #     argocd.argoproj.io/sync-wave: "-1"
@@ -93,7 +107,7 @@ loki:
     persistence:
       enabled: true
       storageClass: "local-path"
-      size: 10Gi 
+      size: 10Gi
 
   backend:
     replicas: 0

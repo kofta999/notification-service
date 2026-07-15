@@ -12,6 +12,8 @@ import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 import type { PrismaClient, Notification } from "shared/prisma/client";
 import type { Logger } from "pino";
+import { httpInstrumentationMiddleware } from "@hono/otel";
+import "shared/otel";
 
 class Worker {
 	private id: string;
@@ -45,6 +47,7 @@ class Worker {
 	}
 
 	private setupMetricsServer() {
+	  this.app.use(httpInstrumentationMiddleware())
 		this.app.get("/metrics", async (c) => {
 			this.logger.info("Metrics endpoint accessed");
 			c.header("Content-Type", register.contentType);

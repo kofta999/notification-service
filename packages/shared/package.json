@@ -11,9 +11,14 @@
     "./rate-limiter": "./lib/rate-limiter.ts",
     "./env": "./env.ts",
     "./prisma/client": "./generated/prisma/client.ts",
-    "./errors": "./lib/errors.ts"
+    "./errors": "./lib/errors.ts",
+    "./otel": "./lib/otel.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.78.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
+    "@opentelemetry/sdk-node": "^0.220.0",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "dotenv": "^17.2.1",

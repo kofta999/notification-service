@@ -14,6 +14,7 @@ const envSchema = z.object({
   POSTGRES_HOST: z.string(),
   REDIS_URL: z.string(),
   LOKI_URL: z.string(),
+  TEMPO_URL: z.string(),
   QUEUE_PREFIX: z.string(),
   // Worker Config
   WORKER_NOTI_MAX_RETRIES: z.coerce.number().positive(),

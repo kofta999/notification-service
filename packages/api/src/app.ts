@@ -13,10 +13,13 @@ import { apiKeyAuth } from "./middleware/auth";
 import { apiRateLimit } from "./middleware/rate-limit";
 import { errorHandler } from "./middleware/error-handler";
 import { InvalidPayloadError } from "shared/errors";
+import { httpInstrumentationMiddleware } from "@hono/otel";
+import "shared/otel";
 
 const logger = createLogger("app");
 
 const app = new Hono();
+app.use(httpInstrumentationMiddleware())
 app.use(errorHandler);
 
 export const db = createPrisma();
