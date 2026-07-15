@@ -124,6 +124,22 @@ loki:
 
 prometheus:
   enabled: true
+
+  # 1. Disable Alertmanager
+  alertmanager:
+    enabled: false
+
+  # 2. Disable Pushgateway (you rarely need this)
+  prometheus-pushgateway:
+    enabled: false
+
+  # 3. Disable Node Exporter 
+  prometheus-node-exporter:
+    enabled: false
+
+  # 4. Disable Kube State Metrics 
+  kube-state-metrics:
+    enabled: false
   persistentVolume:
     storageClass: "local-path"
     size: 3Gi
