@@ -191,7 +191,7 @@ grafana:
     type: NodePort
     port: 80
     targetPort: 3000
-    nodePort: 30080
+    nodePort: 31080
     
   persistence:
     enabled: true
